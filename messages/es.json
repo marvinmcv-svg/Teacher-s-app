@@ -1,0 +1,101 @@
+{
+  "common": {
+    "appName": "Tinta",
+    "tagline": "Corrige el cuaderno, no la pantalla.",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "back": "Volver",
+    "signOut": "Cerrar sesión",
+    "language": "Idioma",
+    "theme": "Tema",
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "themeSystem": "Sistema",
+    "skipToContent": "Saltar al contenido",
+    "mainNav": "Navegación principal",
+    "demo": "Demo"
+  },
+  "setup": {
+    "title": "Falta configurar Tinta",
+    "body": "La aplicación no puede conectarse a la base de datos porque faltan variables de entorno.",
+    "steps": "Copia .env.example a .env.local, completa NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, y reinicia el servidor. Ver README → Configuración.",
+    "ok": "Todo está configurado.",
+    "goToLogin": "Ir a iniciar sesión"
+  },
+  "login": {
+    "title": "Inicia sesión",
+    "subtitle": "Califica el trabajo en papel de tus estudiantes con retroalimentación sobre la misma hoja. Tú revisas y apruebas todo.",
+    "google": "Continuar con Google",
+    "or": "o",
+    "emailLabel": "Correo electrónico",
+    "emailPlaceholder": "nombre@colegio.edu.bo",
+    "sendLink": "Enviarme un enlace mágico",
+    "sending": "Enviando…",
+    "linkSent": "Revisa tu correo: te enviamos un enlace para entrar. Puedes cerrar esta pestaña.",
+    "invalidEmail": "Escribe un correo válido.",
+    "error": "No pudimos iniciar sesión. Inténtalo de nuevo en un momento.",
+    "callbackError": "El enlace expiró o ya fue usado. Pide uno nuevo.",
+    "privacyNote": "Los datos de tus estudiantes son privados y nunca se usan para entrenar modelos de IA."
+  },
+  "nav": {
+    "home": "Inicio",
+    "classes": "Clases"
+  },
+  "home": {
+    "greeting": "Hola, {name}",
+    "greetingAnonymous": "Hola",
+    "classesTitle": "Tus clases",
+    "noClasses": "Aún no tienes clases",
+    "noClassesHint": "Crea tu primera clase y agrega a tus estudiantes pegando una lista o subiendo un CSV.",
+    "newClass": "Nueva clase",
+    "studentCount": "{count, plural, =0 {Sin estudiantes} one {# estudiante} other {# estudiantes}}",
+    "nextUp": "Próximamente: crear tareas y escanear la pila de papeles."
+  },
+  "classes": {
+    "newTitle": "Nueva clase",
+    "nameLabel": "Nombre de la clase",
+    "namePlaceholder": "5.º A — Matemáticas",
+    "gradeLabel": "Grado o curso",
+    "gradePlaceholder": "5.º de primaria",
+    "subjectLabel": "Materia",
+    "subjectPlaceholder": "Matemáticas",
+    "localeLabel": "Idioma de la retroalimentación",
+    "localeHint": "Se puede cambiar por estudiante más adelante.",
+    "create": "Crear clase",
+    "creating": "Creando…",
+    "nameRequired": "Ponle un nombre a la clase.",
+    "createError": "No pudimos crear la clase. Inténtalo de nuevo.",
+    "notFound": "No encontramos esta clase, o no tienes acceso a ella."
+  },
+  "roster": {
+    "title": "Estudiantes",
+    "empty": "Esta clase aún no tiene estudiantes.",
+    "addTitle": "Agregar estudiantes",
+    "pasteTab": "Pegar lista",
+    "csvTab": "Subir CSV",
+    "pasteLabel": "Un nombre por línea",
+    "pastePlaceholder": "Ana Pérez\nLuis Mamani\nSofía Quispe",
+    "csvLabel": "Archivo CSV",
+    "csvHint": "Usamos la columna «Nombre» (o «Nombre» + «Apellido») y, si existe, «Código». Funciona con exportaciones de Excel y Google Sheets.",
+    "add": "Agregar a la clase",
+    "adding": "Agregando…",
+    "added": "{count, plural, one {Se agregó # estudiante} other {Se agregaron # estudiantes}}",
+    "skipped": "{count, plural, one {Se omitió # línea} other {Se omitieron # líneas}} (duplicadas o vacías).",
+    "nothingToAdd": "No encontramos nombres nuevos para agregar.",
+    "tooMany": "Puedes agregar hasta {max} estudiantes a la vez.",
+    "addError": "No pudimos agregar a los estudiantes. Inténtalo de nuevo.",
+    "remove": "Quitar a {name}",
+    "removed": "{name} fue quitado de la clase.",
+    "undo": "Deshacer",
+    "inactiveTitle": "Quitados recientemente",
+    "restore": "Restaurar",
+    "externalId": "Código: {id}",
+    "count": "{count, plural, =0 {Sin estudiantes} one {# estudiante} other {# estudiantes}}"
+  },
+  "errors": {
+    "generic": "Algo salió mal. Tu trabajo está guardado; vuelve a intentarlo.",
+    "tryAgain": "Reintentar",
+    "notFoundTitle": "Página no encontrada",
+    "notFoundBody": "La página que buscas no existe o fue movida."
+  }
+}

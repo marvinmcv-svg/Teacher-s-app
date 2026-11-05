@@ -19,6 +19,8 @@ import { formatIssues, itemKeyOf, validateGrade, validateTranscription, validate
 import { bandThresholds } from "@/lib/ai/config";
 import { itemConfidence, submissionBand, toBand, type Band } from "@/lib/grading/confidence";
 import { findNameLines, matchRoster } from "@/lib/grading/names";
+import { decodePageQr } from "@/lib/qr/decode-image";
+import { stickerRedactionBox } from "@/lib/qr/payload";
 import { passThresholdPct } from "@/lib/grading/scales";
 import { cropRegion, measureQuality, normalisePage, redactRegions, toModelImage } from "@/lib/image/process";
 import { assess } from "@/lib/image/quality";
@@ -134,7 +136,11 @@ export async function loadSubmission(db: AdminClient, submissionId: string) {
     "load pages",
   );
   const roster = await must(
-    db.from("students").select("id, display_name, feedback_locale").eq("class_id", cls.id).eq("active", true),
+    db
+      .from("students")
+      .select("id, display_name, feedback_locale, qr_code_token")
+      .eq("class_id", cls.id)
+      .eq("active", true),
     "load roster",
   );
   return {
@@ -215,22 +221,55 @@ export async function stepNameAndRedact(deps: PipelineDeps, L: Loaded) {
     db.from("ocr_lines").select("id, page_id, line_key, text, bbox").eq("submission_id", L.submission.id),
     "load ocr lines",
   );
+  const allLines = lines.map((l) => ({ ...l, bbox: l.bbox as unknown as BBox }));
   const first = L.pages[0];
-  const firstLines = lines
-    .filter((l) => l.page_id === first.id)
-    .map((l) => ({ ...l, bbox: l.bbox as unknown as BBox }));
+  const firstLines = allLines.filter((l) => l.page_id === first.id);
   const rosterNames = L.roster.map((s) => s.display_name);
   const hits = findNameLines(firstLines, rosterNames);
 
-  // Regions to blur on page 1: each name line, extended to the right edge for "Nombre: ____" fields.
-  const regions: BBox[] = hits.map((h) =>
+  // Regions to fill, per page. Page 1: each name line, extended to the right edge for "Nombre: ____" fields.
+  const regionsByPage = new Map<string, BBox[]>(L.pages.map((p) => [p.id, [] as BBox[]]));
+  const firstRegions = hits.map((h) =>
     h.reason === "label" ? { x: h.line.bbox.x, y: h.line.bbox.y, w: 1 - h.line.bbox.x, h: h.line.bbox.h } : h.line.bbox,
   );
-  if (!regions.length) regions.push(FALLBACK_REDACT); // privacy-first default when no name field was found
+  if (!firstRegions.length) firstRegions.push(FALLBACK_REDACT); // privacy-first default when no name field was found
+  regionsByPage.get(first.id)!.push(...firstRegions);
 
-  // Student matching (only when not already chosen by QR/manual).
+  // QR (matching priority 1, §3.2). A sticker can be on any page; its printed name is redacted with it.
+  const byToken = new Map(L.roster.map((s) => [s.qr_code_token, s]));
+  let qrStudentId: string | null = null;
+  for (const page of L.pages) {
+    const original = await download(db, BUCKETS.original, page.storage_path);
+    const qr = await decodePageQr(original);
+    if (!qr) continue;
+    if (qr.kind === "sticker" && qr.box) regionsByPage.get(page.id)!.push(stickerRedactionBox(qr.box));
+    if (qr.kind === "cover") regionsByPage.get(page.id)!.push({ x: 0, y: 0, w: 1, h: 0.35 });
+    qrStudentId ??= byToken.get(qr.token)?.id ?? null;
+  }
+
+  // Student matching (only when not already chosen manually).
   let suggestion: { id: string; confidence: number } | null = null;
-  if (!L.submission.student_id && L.roster.length) {
+  let assigned = false;
+  if (!L.submission.student_id && qrStudentId) {
+    // A QR is a deterministic token match, not a guess: assign it unless that student already has work here.
+    const { data: taken } = await db
+      .from("submissions")
+      .select("id")
+      .eq("assignment_id", L.assignment.id)
+      .eq("student_id", qrStudentId)
+      .neq("id", L.submission.id)
+      .maybeSingle();
+    if (!taken) {
+      const { error } = await db
+        .from("submissions")
+        .update({ student_id: qrStudentId, match_method: "qr", suggested_student_id: null })
+        .eq("id", L.submission.id);
+      assigned = !error;
+      if (assigned) L.submission.student_id = qrStudentId;
+    }
+    if (!assigned) suggestion = { id: qrStudentId, confidence: 1 };
+  }
+  if (!L.submission.student_id && !suggestion && L.roster.length) {
     const written = hits.map((h) => h.written).find((w) => w.length > 1);
     let match = written ? matchRoster(written, L.roster) : null;
     if (!match?.confident) {
@@ -254,27 +293,32 @@ export async function stepNameAndRedact(deps: PipelineDeps, L: Loaded) {
     if (match?.best) suggestion = { id: match.best.student.id, confidence: Math.round(match.best.score * 100) / 100 };
   }
 
-  // Redact every page's name region (only page 1 carries the header) and mark redacted OCR lines.
-  const redactedLineIds = firstLines.filter((l) => regions.some((r) => intersects(r, l.bbox))).map((l) => l.id);
+  // Mark redacted OCR lines (never sent to a model) and write the redacted copies.
+  const redactedLineIds = allLines
+    .filter((l) => (regionsByPage.get(l.page_id) ?? []).some((r) => intersects(r, l.bbox)))
+    .map((l) => l.id);
   if (redactedLineIds.length) await db.from("ocr_lines").update({ redacted: true }).in("id", redactedLineIds);
 
   for (const page of L.pages) {
     const original = await download(db, BUCKETS.original, page.storage_path);
-    const redacted = page.id === first.id ? await redactRegions(original, regions) : original;
+    const regions = regionsByPage.get(page.id) ?? [];
+    const redacted = regions.length ? await redactRegions(original, regions) : original;
     const path = redactedPath(L.cls.teacher_id, L.assignment.id, L.submission.id, page.position);
     await upload(db, BUCKETS.redacted, path, redacted);
     await db.from("pages").update({ redacted_storage_path: path }).eq("id", page.id);
   }
 
-  await db
-    .from("submissions")
-    .update({
-      suggested_student_id: suggestion?.id ?? null,
-      name_match_confidence: suggestion?.confidence ?? null,
-      match_method: L.submission.match_method ?? (suggestion ? "name_ocr" : null),
-    })
-    .eq("id", L.submission.id);
-  return { regions: regions.length, redactedLines: redactedLineIds.length, suggested: !!suggestion };
+  if (!assigned)
+    await db
+      .from("submissions")
+      .update({
+        suggested_student_id: suggestion?.id ?? null,
+        name_match_confidence: suggestion?.confidence ?? null,
+        match_method: L.submission.match_method ?? (suggestion ? "name_ocr" : null),
+      })
+      .eq("id", L.submission.id);
+  const regionCount = [...regionsByPage.values()].reduce((n, r) => n + r.length, 0);
+  return { regions: regionCount, redactedLines: redactedLineIds.length, suggested: !!suggestion, qr: assigned };
 }
 
 function intersects(a: BBox, b: BBox) {

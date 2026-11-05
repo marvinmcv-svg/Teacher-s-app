@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   // Cache Components is off for now: almost every teacher screen is per-user,
   // per-request data. See DECISIONS.md (D-004).
   cacheComponents: false,
+  // Native canvas + pdf.js (scanner-PDF rasterising, §3.2) load with plain Node require.
+  serverExternalPackages: ["@napi-rs/canvas", "pdfjs-dist"],
   turbopack: {
     rules: {
       "*.css": {

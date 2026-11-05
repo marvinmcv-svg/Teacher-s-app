@@ -2,6 +2,8 @@
 import {
   ArrowLeft,
   Camera,
+  FileText,
+  QrCode,
   Check,
   ChevronRight,
   CloudOff,
@@ -18,13 +20,16 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Label, Select } from "@/components/ui/input";
-import { analyse, decodeFile, frameDiff, toJpeg } from "@/lib/capture/camera";
+import { preparePdfImport, startPdfImport } from "@/lib/actions/capture";
+import { analyse, decodeFile, frameDiff, readQr, toJpeg } from "@/lib/capture/camera";
 import { queueDb, type QueuedGroup, type QueuedPage } from "@/lib/capture/idb";
 import { kick, startUploader, uploadQueue } from "@/lib/capture/uploader";
 import type { QualityIssue } from "@/lib/image/quality";
+import { splitByQr, type PageQr } from "@/lib/qr/payload";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-type Student = { id: string; display_name: string };
+type Student = { id: string; display_name: string; qr_code_token: string };
 type LocalPage = { position: number; url: string; issues: QualityIssue[]; override: boolean };
 type Current = {
   clientRef: string;
@@ -79,6 +84,15 @@ export function ScanScreen({
   const [cameraError, setCameraError] = useState(false);
   const [auto, setAuto] = useState(true);
   const [hint, setHint] = useState<QualityIssue | "steady" | null>(null);
+  const [qrNote, setQrNote] = useState<string | null>(null);
+  const currentRef = useRef<Current | null>(null);
+  currentRef.current = current;
+  useEffect(() => {
+    if (!qrNote) return;
+    const id = setTimeout(() => setQrNote(null), 2500);
+    return () => clearTimeout(id);
+  }, [qrNote]);
+  const byToken = useMemo(() => new Map(roster.map((s) => [s.qr_code_token, s])), [roster]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const lastFrame = useRef<Uint8Array | null>(null);
@@ -142,37 +156,72 @@ export function ScanScreen({
         createdAt: Date.now(),
       };
       await queueDb.putGroup(g);
-      setCurrent({ clientRef: g.clientRef, studentId: g.studentId, studentName: g.studentName, replace, pages: [] });
+      const next = { clientRef: g.clientRef, studentId: g.studentId, studentName: g.studentName, replace, pages: [] };
+      currentRef.current = next;
+      setCurrent(next);
       setPicking(false);
     },
     [assignment.id],
   );
 
-  const addPage = useCallback(
-    async (p: Pending, override: boolean) => {
-      if (!current) return;
-      const position = current.pages.length + 1;
-      await queueDb.putPage({
-        key: `${current.clientRef}:${position}`,
-        clientRef: current.clientRef,
-        position,
-        blob: p.blob,
-        width: p.width,
-        height: p.height,
-        quality: p.quality,
-        override,
-        uploaded: false,
-      });
-      setCurrent((c) => c && { ...c, pages: [...c.pages, { position, url: p.url, issues: p.issues, override }] });
-      setPending(null);
-    },
-    [current],
-  );
+  const addPage = useCallback(async (p: Pending, override: boolean) => {
+    const current = currentRef.current;
+    if (!current) return;
+    const position = current.pages.length + 1;
+    currentRef.current = {
+      ...current,
+      pages: [...current.pages, { position, url: p.url, issues: p.issues, override }],
+    };
+    await queueDb.putPage({
+      key: `${current.clientRef}:${position}`,
+      clientRef: current.clientRef,
+      position,
+      blob: p.blob,
+      width: p.width,
+      height: p.height,
+      quality: p.quality,
+      override,
+      uploaded: false,
+    });
+    setCurrent((c) => c && { ...c, pages: [...c.pages, { position, url: p.url, issues: p.issues, override }] });
+    setPending(null);
+  }, []);
 
   const capture = useCallback(async () => {
     const v = videoRef.current;
     if (!v || !v.videoWidth || !current || pending) return;
     const { metrics, issues } = analyse(v, v.videoWidth, v.videoHeight, Math.max(v.videoWidth, v.videoHeight));
+    const qr = readQr(v, v.videoWidth, v.videoHeight);
+    const qrStudent = qr ? byToken.get(qr.token) : undefined;
+    if (qr && qrStudent && qr.kind === "cover") {
+      // Cover sheet (§3.2): it names the next student and is not itself a page of work.
+      navigator.vibrate?.([20, 40, 20]);
+      await commitCurrent();
+      await startGroup(qrStudent, scanned.has(qrStudent.id));
+      setQrNote(t("qrMatched", { name: qrStudent.display_name }));
+      return;
+    }
+    if (qr && qrStudent && qr.kind === "sticker" && currentRef.current?.studentId !== qrStudent.id) {
+      const cur = currentRef.current!;
+      if (!cur.studentId && cur.pages.length === 0) {
+        // Sticker on the first page: this capture is that student's.
+        const g = (await queueDb.getGroup(cur.clientRef))!;
+        const replace = scanned.has(qrStudent.id);
+        await queueDb.putGroup({
+          ...g,
+          studentId: qrStudent.id,
+          studentName: qrStudent.display_name,
+          replaceExisting: replace,
+        });
+        const next = { ...cur, studentId: qrStudent.id, studentName: qrStudent.display_name, replace };
+        currentRef.current = next;
+        setCurrent(next);
+      } else {
+        await commitCurrent();
+        await startGroup(qrStudent, scanned.has(qrStudent.id));
+      }
+      setQrNote(t("qrMatched", { name: qrStudent.display_name }));
+    }
     const jpeg = await toJpeg(v, v.videoWidth, v.videoHeight);
     const p: Pending = {
       ...jpeg,
@@ -183,7 +232,7 @@ export function ScanScreen({
     navigator.vibrate?.(30);
     if (issues.length) setPending(p);
     else await addPage(p, false);
-  }, [current, pending, addPage]);
+  }, [current, pending, addPage, byToken, startGroup, scanned, t]);
 
   // Live quality hints + steady-hand auto-capture
   useEffect(() => {
@@ -217,10 +266,12 @@ export function ScanScreen({
   }, [current, picking, cameraError, pending, auto, capture]);
 
   async function commitCurrent() {
+    const current = currentRef.current;
     if (!current) return;
     if (current.pages.length === 0) await queueDb.deleteGroup(current.clientRef);
     else await queueDb.putGroup({ ...(await queueDb.getGroup(current.clientRef))!, status: "ready" });
     current.pages.forEach((p) => URL.revokeObjectURL(p.url));
+    currentRef.current = null;
     setCurrent(null);
     await uploadQueue.refresh();
     void kick();
@@ -243,29 +294,44 @@ export function ScanScreen({
 
   async function bulkUpload(files: FileList, perStudent: number) {
     const list = Array.from(files).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-    for (let i = 0; i < list.length; i += perStudent) {
+    // Pass 1: encode every photo and read any QR (cover sheet / name sticker).
+    const encoded: { jpeg: Awaited<ReturnType<typeof toJpeg>>; quality: QueuedPage["quality"] }[] = [];
+    const qrs: PageQr[] = [];
+    for (const f of list) {
+      const bmp = await decodeFile(f);
+      const { metrics, issues } = analyse(bmp, bmp.width, bmp.height, Math.max(bmp.width, bmp.height));
+      const qr = readQr(bmp, bmp.width, bmp.height);
+      const jpeg = await toJpeg(bmp, bmp.width, bmp.height);
+      bmp.close();
+      encoded.push({
+        jpeg,
+        quality: { sharpness: metrics.sharpness, brightness: metrics.brightness, glare: metrics.glare, issues },
+      });
+      qrs.push(qr && byToken.has(qr.token) ? { kind: qr.kind, token: qr.token } : null);
+    }
+    // Pass 2: group by QR when present, else by the fixed pages-per-student count.
+    const taken = new Set(scanned);
+    for (const [gi, g] of splitByQr(qrs, perStudent).entries()) {
       const clientRef = newRef();
-      const chunk = list.slice(i, i + perStudent);
+      let student = g.token ? (byToken.get(g.token) ?? null) : null;
+      if (student && taken.has(student.id)) student = null; // already has work: the teacher decides
+      if (student) taken.add(student.id);
       await queueDb.putGroup({
         clientRef,
         assignmentId: assignment.id,
-        studentId: null,
-        studentName: null,
+        studentId: student?.id ?? null,
+        studentName: student?.display_name ?? null,
         replaceExisting: false,
         status: "capturing",
-        createdAt: Date.now() + i,
+        createdAt: Date.now() + gi,
       });
-      for (const [j, f] of chunk.entries()) {
-        const bmp = await decodeFile(f);
-        const { metrics, issues } = analyse(bmp, bmp.width, bmp.height, Math.max(bmp.width, bmp.height));
-        const jpeg = await toJpeg(bmp, bmp.width, bmp.height);
-        bmp.close();
+      for (const [j, idx] of g.pages.entries()) {
         await queueDb.putPage({
           key: `${clientRef}:${j + 1}`,
           clientRef,
           position: j + 1,
-          ...jpeg,
-          quality: { sharpness: metrics.sharpness, brightness: metrics.brightness, glare: metrics.glare, issues },
+          ...encoded[idx].jpeg,
+          quality: encoded[idx].quality,
           override: false,
           uploaded: false,
         });
@@ -335,6 +401,14 @@ export function ScanScreen({
                   className="absolute inset-x-3 top-3 rounded-lg bg-black/70 px-3 py-2 text-sm text-white"
                 >
                   {hint === "steady" ? t("holdSteady") : t(`quality.${hint}`)}
+                </p>
+              )}
+              {qrNote && !pending && (
+                <p
+                  role="status"
+                  className="absolute inset-x-3 bottom-3 flex items-center gap-2 rounded-lg bg-pen-green/90 px-3 py-2 text-sm text-white"
+                >
+                  <QrCode aria-hidden className="size-4" /> {qrNote}
                 </p>
               )}
               {pending && (
@@ -415,6 +489,7 @@ export function ScanScreen({
       )}
 
       <BulkUpload onFiles={bulkUpload} />
+      <PdfUpload assignmentId={assignment.id} online={online} />
       <QueuePanel groups={mine} />
     </div>
   );
@@ -558,5 +633,61 @@ function QueuePanel({ groups }: { groups: QueuedGroup[] }) {
         </Button>
       )}
     </section>
+  );
+}
+
+function PdfUpload({ assignmentId, online }: { assignmentId: string; online: boolean }) {
+  const t = useTranslations("scan");
+  const router = useRouter();
+  const [per, setPer] = useState(1);
+  const [state, setState] = useState<"idle" | "uploading" | "started" | "error">("idle");
+  return (
+    <details className="rounded-[var(--radius-card)] border border-rule bg-card p-4">
+      <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-medium">
+        <FileText aria-hidden className="size-4" /> {t("pdfTitle")}
+      </summary>
+      <div className="mt-3 flex flex-col gap-3">
+        <p className="text-sm text-ink-muted">{t("pdfHint")}</p>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="pdf-per">{t("pagesPerStudentNoQr")}</Label>
+          <Select id="pdf-per" value={per} onChange={(e) => setPer(Number(e.target.value))} className="max-w-32">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <Input
+          type="file"
+          accept="application/pdf"
+          disabled={!online || state === "uploading"}
+          aria-label={t("pdfTitle")}
+          className="py-2"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            if (file.size > 50 * 1024 * 1024) return setState("error");
+            setState("uploading");
+            const prep = await preparePdfImport({ assignmentId, pagesPerStudent: per });
+            if (!prep.ok) return setState("error");
+            const { error } = await createSupabaseBrowserClient()
+              .storage.from("pages-original")
+              .upload(prep.path, file, { contentType: "application/pdf", upsert: false });
+            if (error) return setState("error");
+            const started = await startPdfImport(prep.importId);
+            setState(started.ok ? "started" : "error");
+            if (started.ok) router.refresh();
+          }}
+        />
+        {!online && <p className="text-sm text-pen-amber">{t("pdfNeedsOnline")}</p>}
+        <p role="status" className="text-sm">
+          {state === "uploading" && t("pdfUploading")}
+          {state === "started" && <span className="text-pen-green">{t("pdfStarted")}</span>}
+          {state === "error" && <span className="text-pen-red">{t("pdfError")}</span>}
+        </p>
+      </div>
+    </details>
   );
 }

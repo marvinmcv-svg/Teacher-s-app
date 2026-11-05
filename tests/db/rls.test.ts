@@ -142,6 +142,21 @@ beforeAll(async () => {
       await q("insert into public.comment_bank (teacher_id, locale, text) values ($1, 'es', 'Revisa el signo')", [
         teacher,
       ]);
+      // Phase 2 tables
+      await q("insert into public.pdf_imports (assignment_id, teacher_id, storage_path) values ($1, $2, $3)", [
+        ids[`assignment${key}`],
+        teacher,
+        `${teacher}/${ids[`assignment${key}`]}/imports/x.pdf`,
+      ]);
+      await q(
+        `insert into public.blind_checks (submission_id, assignment_id, teacher_id, items, n_items, exact_rate, within_rate)
+         values ($1, $2, $3, '[]', 0, 1, 1)`,
+        [ids[`submission${key}`], ids[`assignment${key}`], teacher],
+      );
+      await q(
+        "insert into public.mini_lessons (assignment_id, misconception_tag, locale, lesson) values ($1, 'sign_error', 'es', '{}')",
+        [ids[`assignment${key}`]],
+      );
     });
   }
   // A adds C as co-teacher of class A
@@ -248,6 +263,51 @@ describe("RLS: teacher isolation", () => {
       "insert into public.grading_runs (submission_id, kind, model, prompt_version, status) values ($1, 'grade', 'm', 'v1', 'ok')",
       [ids.submissionA],
     );
+  });
+});
+
+describe("RLS: Phase 2 tables", () => {
+  it("imports, blind checks and mini-lessons are isolated per teacher", async () => {
+    for (const t of ["pdf_imports", "blind_checks", "mini_lessons"]) {
+      expect(await count(A, `public.${t}`), t).toBe(1);
+    }
+    expect(await count(B, "public.pdf_imports", "assignment_id = $1", [ids.assignmentA])).toBe(0);
+    expect(await count(B, "public.blind_checks", "submission_id = $1", [ids.submissionA])).toBe(0);
+    expect(await count(B, "public.mini_lessons", "assignment_id = $1", [ids.assignmentA])).toBe(0);
+    await expectBlocked(
+      B,
+      "insert into public.pdf_imports (assignment_id, teacher_id, storage_path) values ($1, $2, $3)",
+      [ids.assignmentA, B, `${B}/x.pdf`],
+    );
+    // a PDF path outside the teacher's own prefix is refused
+    await expectBlocked(
+      A,
+      "insert into public.pdf_imports (assignment_id, teacher_id, storage_path) values ($1, $2, $3)",
+      [ids.assignmentA, A, `${B}/x.pdf`],
+    );
+    await expectBlocked(
+      B,
+      `insert into public.blind_checks (submission_id, assignment_id, teacher_id, items, n_items, exact_rate, within_rate)
+       values ($1, $2, $3, '[]', 0, 1, 1)`,
+      [ids.submissionA, ids.assignmentA, B],
+    );
+  });
+
+  it("overnight batches and style profiles are pipeline-owned", async () => {
+    await expectBlocked(A, "insert into public.grading_batches (phase, submission_ids) values ('grade', '{}')");
+    await expectBlocked(A, "insert into public.style_profiles (teacher_id, profile) values ($1, '{}')", [A]);
+    let n = 0;
+    try {
+      n = await count(A, "public.grading_batches");
+    } catch {
+      n = 0;
+    }
+    expect(n).toBe(0);
+  });
+
+  it("teachers can set their blind-check rate but not beyond 50%", async () => {
+    await as(A, (q) => q("update public.teachers set blind_check_pct = 10 where id = $1", [A]));
+    await expectBlocked(A, "update public.teachers set blind_check_pct = 90 where id = $1", [A]);
   });
 });
 

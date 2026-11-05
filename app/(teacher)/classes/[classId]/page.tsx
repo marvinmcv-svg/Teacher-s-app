@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, Plus } from "lucide-react";
+import { ArrowLeft, ChevronRight, Plus, QrCode } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -88,14 +88,40 @@ export default async function ClassPage({ params }: PageProps<"/classes/[classId
             <StudentList classId={cls.id} active={active} inactive={inactive} />
           </CardContent>
         </Card>
-        <Card className="self-start">
-          <CardHeader>
-            <CardTitle>{t("roster.addTitle")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RosterImport classId={cls.id} />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-6 self-start">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("roster.addTitle")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RosterImport classId={cls.id} />
+            </CardContent>
+          </Card>
+          {active.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <QrCode aria-hidden className="size-5" /> {t("qr.title")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <p className="text-sm text-ink-muted">{t("qr.hint")}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="outline">
+                    <a href={`/api/classes/${cls.id}/qr-stickers.pdf?layout=stickers`} target="_blank" rel="noopener">
+                      {t("qr.stickers")}
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <a href={`/api/classes/${cls.id}/qr-stickers.pdf?layout=covers`} target="_blank" rel="noopener">
+                      {t("qr.covers")}
+                    </a>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );

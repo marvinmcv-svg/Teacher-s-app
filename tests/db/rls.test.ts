@@ -125,10 +125,10 @@ beforeAll(async () => {
         [ids[`class${key}`]],
       );
       ids[`assignment${key}`] = asg.rows[0].id as string;
-      const sub = await q("insert into public.submissions (assignment_id, student_id) values ($1, $2) returning id", [
-        ids[`assignment${key}`],
-        ids[`student${key}`],
-      ]);
+      const sub = await q(
+        "insert into public.submissions (assignment_id, student_id, status) values ($1, $2, 'approved') returning id",
+        [ids[`assignment${key}`], ids[`student${key}`]],
+      );
       ids[`submission${key}`] = sub.rows[0].id as string;
       await q("insert into public.pages (submission_id, position, storage_path) values ($1, 1, $2)", [
         ids[`submission${key}`],

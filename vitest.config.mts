@@ -18,6 +18,16 @@ export default defineConfig({
       {
         resolve: { alias },
         test: {
+          name: "integration",
+          include: ["tests/integration/**/*.test.ts"],
+          environment: "node",
+          testTimeout: 60_000,
+          hookTimeout: 60_000,
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
           name: "db",
           include: ["tests/db/**/*.test.ts"],
           environment: "node",

@@ -1,0 +1,19 @@
+{
+  "$comment": "Model roles, effort and prices. Models can be overridden by env (TINTA_MODEL_*). Prices are USD per million tokens from the Anthropic pricing table (checked 2026-11-05); verify before relying on cost reports. The eval harness, not this file, decides the final choices.",
+  "roles": {
+    "name_read": { "model": "claude-haiku-5-5", "effort": "low", "max_tokens": 1024 },
+    "key_extract": { "model": "claude-sonnet-5-5", "effort": "medium", "max_tokens": 16000 },
+    "transcribe": { "model": "claude-sonnet-5-5", "effort": "medium", "max_tokens": 16000 },
+    "grade": { "model": "claude-sonnet-5-5", "effort": "medium", "max_tokens": 16000 },
+    "verify": { "model": "claude-opus-5-5", "effort": "medium", "max_tokens": 16000 },
+    "regenerate": { "model": "claude-sonnet-5-5", "effort": "low", "max_tokens": 2048 }
+  },
+  "prices_per_mtok": {
+    "claude-haiku-5-5": { "input": 0.1, "output": 0.5, "cache_read": 0.01 },
+    "claude-sonnet-5-5": { "input": 2.0, "output": 10.0, "cache_read": 0.2 },
+    "claude-opus-5-5": { "input": 4.0, "output": 20.0, "cache_read": 0.2 }
+  },
+  "image": { "max_long_edge": 2576, "max_visual_tokens": 4784, "patch": 28, "jpeg_quality": 85 },
+  "confidence_bands": { "high": 0.85, "medium": 0.6 },
+  "per_teacher_concurrency": 4
+}

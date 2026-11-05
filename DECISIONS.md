@@ -147,3 +147,42 @@ pin the API version in the adapter.
 - **D-019 — PWA:** the web manifest ships now. The service worker (Serwist) and the IndexedDB
   upload queue come with the capture flow in Phase 1, where offline behaviour actually
   matters; caching authenticated pages before then risks serving stale or private content.
+
+---
+
+## C. Phase 1 decisions (6 Nov 2026)
+
+- **D-020 — JSON outputs for every model call** (`messages.parse` + `zodOutputFormat`). No forced `tool_choice` (it returns 400 on the 5.5 models). The prompts say "respond with the JSON object" rather than "call the tool". Optional fields are `nullable()` and always present, so the schemas stay strict. Business rules (score ≤ max, `max` = question max, line keys exist and are on the pin's page, rubric labels valid, one item per key) live in `lib/ai/validate.ts`. A failure triggers one corrective retry with the errors listed, then the submission goes to `needs_attention`.
+- **D-021 — Questions are referred to as `q{position}` in prompts** (not database UUIDs). Short stable keys mean fewer model errors, and the pipeline maps them back to IDs. Rubric criteria use their snake_case key.
+- **D-022 — Quality thresholds** (`lib/image/quality.ts`). Blur is the Laplacian variance on a 512 px analysis image. Glare is measured _locally_ (most-saturated tile minus the median tile), so clean white scanner pages aren't flagged. These are placeholders until they're calibrated on real phone photos (§3.2).
+- **D-023 — Name redaction is a solid fill with the region's mean colour**, not a blur. Blur and pixelation can leave recoverable structure; a solid fill can't. If no name field is found on page 1, the top 8 % of the page is redacted anyway (privacy-first default). Redacted OCR lines are kept in the database (`ocr_lines.redacted`) but never sent to a model. The pipeline refuses to send a page that has no redacted copy.
+- **D-024 — Student matching suggests, never assigns.** Name reading matches against the roster in code (accent- and order-insensitive Levenshtein). Only when that isn't confident is the cropped header sent to the fast model. The result goes in `submissions.suggested_student_id` and the teacher confirms it with a chip.
+- **D-025 — Images are sent as base64 for now**, not via the Files API. Pages are pre-resized to the high-resolution tier (≤ 2576 px, ≤ 4784 tokens). The Files API (upload once, reference three times) is a Phase 2 cost optimisation (§8.6).
+- **D-026 — No server-side refusal `fallbacks` yet** (this revises D-011). The parse helper is on the non-beta path. A refusal is recorded in `grading_runs` and puts the submission in `needs_attention` with `ai_refused`. Re-evaluate after measuring refusal rates on real work.
+- **D-027 — Split pipeline only.** The joint transcribe-and-grade variant for the §8.2 A/B isn't built yet. The eval report says so explicitly.
+- **D-028 — Pipeline status vocabulary.**
+  - `status = ready` and a confidence band means it's ready for review.
+  - `needs_attention` + `error_code` is only for problems: `retake`, `not_configured`, `ai_refused`, `ai_invalid_output`, `queue_unavailable`, `pipeline_error`.
+  - Progress is `processing_stage`: queued → reading → grading → checking → ready / failed.
+- **D-029 — Capture uploads go straight from the browser to the private bucket.** Storage RLS limits them to the teacher's own prefix. Submissions are created idempotently by a client reference, so an interrupted queue resumes without duplicates. Pages are re-encoded to JPEG ≤ 3000 px on the device, which also strips EXIF/GPS, and normalised again on the server.
+- **D-030 — Rubric criteria are snapshotted onto the assignment** (`assignments.criteria`). Templates live in code (ES/EN), so editing a template never changes a batch already being graded.
+- **D-031 — Review gating is enforced on the server**, not only in the UI (`lib/grading/review-rules.ts`). Every red or orange item must be checked, or have its score changed, before approval. A wellbeing flag needs an explicit acknowledgement. "Approve all green" unlocks only after a random sample is opened (10 %, minimum 2), and the random pick happens in a route handler.
+- **D-032 — Releases need an approved submission**, enforced by a database trigger as well as in the app. Tokens are 256-bit base64url. The student view and the student PDF read through `lib/release/load.ts` with the service role after validating the token. Signed image URLs last 10 minutes and storage paths never reach the client. Revoking a link returns the work to "approved".
+- **D-033 — Exports.**
+  - The PNG and PDF are rendered on the server. Pin icons are SVG paths, so no font is needed.
+  - The PDF uses pdf-lib's built-in Helvetica (WinAnsi). It covers Spanish; math symbols are mapped (−→-, →→->, ≤→<=) or replaced with "?". A full-Unicode embedded font is a follow-up.
+  - The CSV has a BOM, is RFC 4180, guards against formula injection, and only lists teacher-approved grades.
+- **D-034 — The student view uses the student's feedback language** (`getTranslations({ locale })`, which `i18n/request.ts` honours), whatever the viewer's language. An invalid link falls back to the viewer's language because there's no student to take it from.
+- **D-035 — Pins go in the right margin** next to the answer (worksheets usually leave it empty) and fall back to the left only when the answer runs to the edge. One rule (`pinAnchor`) is shared by the review screen, the student view and the exports. It was found by looking at E2E screenshots on a phone viewport.
+- **D-036 — Service worker written by hand** (`public/sw.js`) instead of Serwist, which needs extra work under Turbopack. Static assets are cache-first. The scan screen is network-first with a cached copy. API routes, `/s/`, auth and other teacher pages are never cached. There's an offline fallback page, and signing out clears cached pages.
+- **D-037 — Testing the AI paths without keys.**
+  - The real pipeline runs in integration tests and E2E with **test-only** OCR/LLM fakes (`tests/fixtures/fake-providers.ts`), injected at the provider boundary. Production code has no fake path.
+  - The Claude client wrapper is unit-tested with the SDK mocked at the network boundary.
+  - Real-model accuracy is only measured by `pnpm eval` on consented papers.
+- **D-038 — Deferred from Phase 1** (listed in the README):
+  - live edge detection, auto-crop and perspective correction (OpenCV.js / jscanify)
+  - splitting scanner PDFs
+  - Files API reuse and server-side fallbacks
+  - the joint-call A/B
+  - KaTeX rendering of LaTeX transcriptions in the review UI
+  - the golden set itself (it needs consent)

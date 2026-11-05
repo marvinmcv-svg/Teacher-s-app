@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Wordmark } from "@/components/brand";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ServiceWorkerRegister } from "@/components/sw-register";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/lib/actions/auth";
@@ -18,6 +19,7 @@ export default async function TeacherLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="relative z-10 flex min-h-dvh flex-col">
+      <ServiceWorkerRegister />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2"

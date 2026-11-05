@@ -3,7 +3,16 @@
 Snap a stack of handwritten papers and get back graded work with red-pen-style feedback pinned to the page. The teacher reviews and approves everything before students see it.
 Spanish-first, bilingual (es/en), mobile-first PWA.
 
-> **Status: Phase 0 (foundations) complete.** Sign-in, language switching, classes and rosters. No AI grading yet; that is Phase 1.
+> **Status: Phase 1 (core loop) built.** Phase 0 foundations, plus:
+>
+> - assignment wizard (typed key, snap-the-key extraction, rubric templates, local grading scales)
+> - capture (camera with a live quality gate, bulk upload, offline queue)
+> - the grading pipeline (Claude + Google Vision via Inngest)
+> - the review queue and review screen
+> - release (student link, annotated PDF/PNG, QR sheet, CSV)
+> - the eval harness and an installable PWA
+>
+> **Grading needs API keys** (`ANTHROPIC_API_KEY`, Google Vision credentials, `SUPABASE_SECRET_KEY`, Inngest). Without them the app says so; it never fakes a grade. See "What's not done yet" below.
 > The product spec is the master prompt. Engineering decisions are in [DECISIONS.md](DECISIONS.md) and data handling is in [PRIVACY.md](PRIVACY.md).
 
 ## Stack
@@ -70,3 +79,16 @@ inngest/             job client + functions
 supabase/            config.toml + migrations (schema, RLS, storage)
 tests/               unit/, db/ (RLS), e2e/
 ```
+
+## What's not done yet (Phase 1)
+
+- **Accuracy is unmeasured.** No golden papers yet: they need written school and parent consent. The Phase 1 eval targets (≥ 90 % within-tolerance agreement; "high" items ≥ 95 % correct) can't be checked until a real set exists and the keys are configured.
+- **Real-model runs.** The pipeline has never run against the live Claude or Google Vision APIs from this environment (no keys). Everything around the providers is tested.
+- **Capture:**
+  - no live edge detection, auto-crop or perspective correction yet (framing guide only)
+  - no auto-split of scanner PDFs
+- **Measurements still to do:**
+  - Lighthouse installability check
+  - throttled-3G run on a mid-range Android
+  - the 15-minute, 10-real-papers acceptance run
+- **Deferred to Phase 2:** joint-call A/B, Files API reuse, server-side refusal fallbacks, KaTeX rendering of transcriptions.

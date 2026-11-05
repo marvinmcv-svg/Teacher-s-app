@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-// Installability (service worker + offline queue land in Phase 1 with capture).
+// Installable PWA: manifest + /sw.js (see public/sw.js).
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Tinta",

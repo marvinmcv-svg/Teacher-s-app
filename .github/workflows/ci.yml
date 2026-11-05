@@ -54,7 +54,7 @@ jobs:
           TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
 
   e2e:
-    name: E2E (local Supabase + Playwright)
+    name: Integration + E2E (local Supabase + Playwright)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,11 +71,12 @@ jobs:
         run: supabase start -x studio,realtime,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
       - name: Write .env.local from the local stack
         run: |
-          supabase status -o env | grep -E '^(API_URL|PUBLISHABLE_KEY)=' > /tmp/sb.env
+          supabase status -o env | grep -E '^(API_URL|PUBLISHABLE_KEY|SECRET_KEY)=' > /tmp/sb.env
           . /tmp/sb.env
           {
             echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
             echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_SECRET_KEY=$SECRET_KEY"
             echo "NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000"
           } > .env.local
       - name: RLS suite against real Supabase
@@ -83,6 +84,8 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
           RLS_AGAINST_SUPABASE: "1"
+      - name: Pipeline + release integration tests (fake providers, real Supabase)
+        run: set -a && . ./.env.local && set +a && pnpm test:integration
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e

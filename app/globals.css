@@ -116,3 +116,15 @@ body::before {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* "Stamp" micro-interaction on Approve (§5) */
+@keyframes stamp {
+  0% {
+    transform: scale(1.6) rotate(-8deg);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotate(-3deg);
+    opacity: 1;
+  }
+}

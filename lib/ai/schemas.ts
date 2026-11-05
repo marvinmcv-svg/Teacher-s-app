@@ -144,3 +144,14 @@ export const NameReadSchema = z.object({ name_text: z.string().nullable(), confi
 export type NameRead = z.infer<typeof NameReadSchema>;
 
 export const RegenerateSchema = z.object({ comment: z.string() });
+
+/** Eval-only: LLM judge for feedback quality (§8.7). Scores 1–5. */
+export const FeedbackJudgeSchema = z.object({
+  specific: z.number().int(),
+  actionable: z.number().int(),
+  correct: z.number().int(),
+  tone: z.number().int(),
+  length_ok: z.boolean(),
+  notes: z.string(),
+});
+export type FeedbackJudge = z.infer<typeof FeedbackJudgeSchema>;

@@ -28,6 +28,24 @@ export default defineConfig({
       {
         resolve: { alias },
         test: {
+          name: "eval",
+          include: ["evals/**/*.eval.ts"],
+          environment: "node",
+          testTimeout: 6 * 3600_000,
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
+          name: "worker",
+          include: ["tests/worker/**/*.worker.ts"],
+          environment: "node",
+          testTimeout: 60_000,
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
           name: "db",
           include: ["tests/db/**/*.test.ts"],
           environment: "node",

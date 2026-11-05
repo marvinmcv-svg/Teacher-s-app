@@ -47,3 +47,7 @@ next-env.d.ts
 supabase/.temp/
 supabase/.branches/
 !.env.example
+
+# eval golden set: minors' work — never commit without a school agreement that allows it
+/evals/golden/images/
+/evals/golden/manifest.json

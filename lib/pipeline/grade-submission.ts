@@ -26,7 +26,7 @@ import { lineKey } from "@/lib/ocr/vision-lines";
 import { unionBox, type BBox, type OcrProvider } from "@/lib/ocr/types";
 import { BUCKETS, type AdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/db/types";
-import { buildAssignmentContext, levelStep, type LoadedAssignment } from "./context";
+import { buildAssignmentContext, levelStep } from "./context";
 
 /**
  * submission.grade (§8.1). Each exported step is idempotent and safe to retry
@@ -88,11 +88,12 @@ function recorder(db: AdminClient, submissionId: string, assignmentId: string) {
     regenerate: "regenerate",
   } as const;
   return async (r: CallRecord) => {
+    if (!(r.role in kindByRole)) return; // eval-only roles (judge) aren't pipeline runs
     // Never store student content in error fields; raw_output is the model's JSON (needed for audit/evals).
     await db.from("grading_runs").insert({
       submission_id: submissionId,
       assignment_id: assignmentId,
-      kind: kindByRole[r.role],
+      kind: kindByRole[r.role as keyof typeof kindByRole],
       model: r.model,
       prompt_version: r.promptVersion,
       effort: r.effort,

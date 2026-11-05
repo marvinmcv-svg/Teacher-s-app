@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { signIn } from "./helpers";
 
 /**
  * Phase 0 happy path (§11): a teacher signs in (magic link), switches
@@ -7,34 +8,6 @@ import { expect, test, type Page } from "@playwright/test";
  *
  * Needs a local Supabase stack with Mailpit (`pnpm dlx supabase start`).
  */
-const MAILPIT = process.env.MAILPIT_URL ?? "http://127.0.0.1:54324";
-
-async function latestMagicLink(email: string): Promise<string> {
-  for (let i = 0; i < 30; i++) {
-    const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}&limit=1`);
-    const data = (await res.json()) as { messages?: { ID: string }[] };
-    const id = data.messages?.[0]?.ID;
-    if (id) {
-      const msg = (await (await fetch(`${MAILPIT}/api/v1/message/${id}`)).json()) as { HTML?: string; Text?: string };
-      const body = `${msg.HTML ?? ""} ${msg.Text ?? ""}`;
-      const match = body.match(/https?:\/\/[^\s"'<>]+\/auth\/v1\/verify[^\s"'<>]+/);
-      if (match) return match[0].replace(/&amp;/g, "&");
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error(`No magic link email for ${email}`);
-}
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/");
-  await expect(page).toHaveURL(/\/login/);
-  await page.getByLabel(/correo electrónico|email/i).fill(email);
-  await page.getByRole("button", { name: /enlace mágico|magic link/i }).click();
-  await expect(page.getByRole("status")).toBeVisible();
-  await page.goto(await latestMagicLink(email));
-  await expect(page).toHaveURL(/127\.0\.0\.1:3000\/$/);
-}
-
 test("teacher signs in, switches language, creates a class and adds students", async ({ page }) => {
   const email = `teacher-${Date.now()}@tinta.test`;
 

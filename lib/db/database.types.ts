@@ -1158,6 +1158,7 @@ export type Database = {
           approved_at: string | null;
           approved_by: string | null;
           assignment_id: string;
+          client_ref: string | null;
           confidence: Database["public"]["Enums"]["confidence_band"] | null;
           created_at: string;
           error_code: string | null;
@@ -1180,6 +1181,7 @@ export type Database = {
           approved_at?: string | null;
           approved_by?: string | null;
           assignment_id: string;
+          client_ref?: string | null;
           confidence?: Database["public"]["Enums"]["confidence_band"] | null;
           created_at?: string;
           error_code?: string | null;
@@ -1201,6 +1203,7 @@ export type Database = {
           approved_at?: string | null;
           approved_by?: string | null;
           assignment_id?: string;
+          client_ref?: string | null;
           confidence?: Database["public"]["Enums"]["confidence_band"] | null;
           created_at?: string;
           error_code?: string | null;

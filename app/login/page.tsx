@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/brand";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ServiceWorkerRegister } from "@/components/sw-register";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Card, CardContent } from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -22,6 +23,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <main className="relative z-10 mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 py-6">
+      {/* signed out → drop any cached teacher pages on this device */}
+      <ServiceWorkerRegister clearPrivate />
       <div className="flex items-center justify-between">
         <Wordmark />
         <div className="flex items-center">

@@ -7,7 +7,7 @@ Have a lawyer review it before selling to schools (§9).
 
 - Student work is minors' data. We collect the minimum, keep it private, and never use it to train models.
 - Nothing reaches a student until a teacher approves it.
-- LLMs never see student identities. Names and headers are redacted before any LLM call (from Phase 1).
+- Grading models never see student identities: names and headers are redacted before the transcribe, grade and verify calls. One narrow exception, allowed by the spec: when matching against the roster is unsure, **only the cropped header** of page 1 goes to the fast model so it can read the name. The roster itself is never sent; matching happens in our code.
 
 ## What we store (today)
 
@@ -18,7 +18,13 @@ Have a lawyer review it before selling to schools (§9).
 | Student display name, optional external ID                     | `students`                 | No birthdates, no photos of faces.                |
 | QR token per student                                           | `students.qr_code_token`   | Random 128-bit; used for name stickers (Phase 2). |
 
-Planned in later phases: page images (private buckets `pages-original`, `pages-redacted`), OCR lines, transcriptions, scores, feedback, and release tokens.
+| Page images | `pages-original` (normalised; EXIF/GPS stripped on device and again on the server) and `pages-redacted` (name area filled) | Private buckets. Paths are `{teacher}/{assignment}/{submission}/…` |
+| OCR lines, transcriptions, scores, pins, feedback | Postgres | Name/header OCR lines are flagged `redacted` and never sent to an LLM |
+| Model call log | `grading_runs` | Model, tokens, cost, latency and the model's JSON output (for audit and evals). No student names: the inputs are redacted |
+| Teacher edits | `teacher_edits` | Before/after diffs, for this teacher's style learning only |
+| Release tokens | `releases` | 256-bit, revocable, optional expiry, `viewed_at` |
+
+Capture queue: photos wait in the teacher's browser (IndexedDB) until they upload, and are deleted from the device once stored. Phones are often shared, so teachers should sign out on shared devices; signing out also clears cached pages.
 
 ## Access control
 
@@ -39,7 +45,7 @@ Planned in later phases: page images (private buckets `pages-original`, `pages-r
 | Inngest                | Background job orchestration         | Job events (IDs only, never images or names)                                                                                     | Phase 1                                                                                                                |
 | PostHog                | Product analytics                    | PII-free events                                                                                                                  | Not wired yet (DECISIONS D-018)                                                                                        |
 
-## Retention (commitments for Phase 1+)
+## Retention (commitments — automation not built yet)
 
 - Deleting an assignment is a soft delete. Its images are hard-deleted after 30 days.
 - Original images are auto-deleted at the end of the school year by default (configurable).

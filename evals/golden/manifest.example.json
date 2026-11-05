@@ -1,0 +1,47 @@
+{
+  "$comment": "FORMAT EXAMPLE ONLY — not real data. Copy to manifest.json and add consented, de-identified papers (see evals/README.md).",
+  "version": 1,
+  "assignments": {
+    "fractions_6": {
+      "title": "Fracciones (ejemplo)",
+      "subject": "Matemáticas",
+      "grade_level": "6",
+      "scale": { "type": "numeric", "preset": "bo_100", "min": 1, "max": 100, "pass_mark": 51, "decimals": 0 },
+      "questions": [
+        {
+          "label": "1",
+          "type": "numeric",
+          "max_points": 2,
+          "correct_answers": ["3/4"],
+          "equivalents": ["0.75"],
+          "form_matters": false
+        },
+        {
+          "label": "2",
+          "type": "math_steps",
+          "max_points": 3,
+          "correct_answers": ["x = 3"],
+          "partial_credit_rules": "1 punto por plantear bien la ecuación"
+        }
+      ]
+    }
+  },
+  "papers": [
+    {
+      "id": "example-001",
+      "consent_ref": "SCHOOL-X/2026/consent-017",
+      "locale": "es",
+      "tags": ["math_steps"],
+      "assignment": "fractions_6",
+      "pages": ["images/example-001-p1.jpg"],
+      "truth": {
+        "scores": { "q1": 2, "q2": 1 },
+        "transcriptions": {
+          "q1": { "text": "\\frac{3}{4}", "student_error": false },
+          "q2": { "text": "x = 7", "student_error": true }
+        },
+        "annotations": [{ "page": 1, "box": { "x": 0.07, "y": 0.18, "w": 0.6, "h": 0.04 }, "kind": "error" }]
+      }
+    }
+  ]
+}

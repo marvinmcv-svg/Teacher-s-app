@@ -36,6 +36,7 @@ export function PageViewer({
   onSelectPin,
   onAddNote,
   readOnly,
+  renderBank,
 }: {
   page: PageImg;
   pins: Pin[];
@@ -46,6 +47,8 @@ export function PageViewer({
   onSelectPin: (id: string | null) => void;
   onAddNote: (region: BBox, text: string, kind: PinKind) => Promise<void>;
   readOnly: boolean;
+  /** Optional comment-bank quick insert for the note form. */
+  renderBank?: (onPick: (text: string) => void) => React.ReactNode;
 }) {
   const t = useTranslations("review");
   const [zoom, setZoom] = useState(1);
@@ -229,6 +232,7 @@ export function PageViewer({
             className="min-w-48 flex-1"
             aria-label={t("notePlaceholder")}
           />
+          {renderBank?.((text) => setNoteText(text))}
           <Button type="submit">{t("save")}</Button>
           <Button type="button" variant="ghost" onClick={() => setAdding(null)}>
             {t("cancel")}

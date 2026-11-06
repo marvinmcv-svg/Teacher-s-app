@@ -13,7 +13,8 @@
     "themeSystem": "Sistema",
     "skipToContent": "Saltar al contenido",
     "mainNav": "Navegación principal",
-    "demo": "Demo"
+    "demo": "Demo",
+    "settings": "Ajustes"
   },
   "setup": {
     "title": "Falta configurar Tinta",
@@ -49,7 +50,9 @@
     "noClassesHint": "Crea tu primera clase y agrega a tus estudiantes pegando una lista o subiendo un CSV.",
     "newClass": "Nueva clase",
     "studentCount": "{count, plural, =0 {Sin estudiantes} one {# estudiante} other {# estudiantes}}",
-    "nextUp": "Próximamente: crear tareas y escanear la pila de papeles."
+    "nextUp": "Próximamente: crear tareas y escanear la pila de papeles.",
+    "agreementTitle": "Coincidencia con la IA",
+    "agreementDetail": "dentro de la tolerancia de tu nota · {items} ítems en {checks} revisiones a ciegas, últimos 90 días"
   },
   "classes": {
     "newTitle": "Nueva clase",
@@ -264,7 +267,16 @@
       "missing_file": "La subida no terminó. Vuelve a subir el PDF.",
       "empty": "El PDF no tiene páginas.",
       "pipeline_error": "Algo falló al separar. Vuelve a subir el PDF."
-    }
+    },
+    "tools": "Herramientas de la tarea",
+    "gradeByAnswer": "Calificar por respuesta",
+    "insights": "Análisis",
+    "costs": "Costo y calidad",
+    "calibrationTitle": "{count, plural, =0 {Aún sin ejemplos de calibración} one {# ejemplo de calibración} other {# ejemplos de calibración}} (máx. 3)",
+    "calibrationHint": "Opcional: califica tú 2–3 hojas, apruébalas y márcalas como ejemplo. La IA seguirá tu nivel de exigencia en el resto.",
+    "calibrationOn": "Las nuevas calificaciones usan tus ejemplos. Las hojas que aún no abriste se pueden recalificar con ellos.",
+    "regradeUntouched": "Recalificar hojas sin abrir",
+    "regradedUntouched": "{count, plural, =0 {Nada que recalificar.} one {# hoja en cola.} other {# hojas en cola.}}"
   },
   "stages": {
     "uploading": "Subiendo",
@@ -454,6 +466,22 @@
       "unclear": "No se entiende",
       "praise": "Elogio",
       "note": "Nota"
+    },
+    "blindTitle": "Revisión a ciegas: califica esta primero",
+    "blindBody": "Pediste que Tinta a veces oculte su calificación. Puntúa cada ítem mirando la hoja; después verás lo que dio la IA y cuánto coinciden. Tus puntajes se guardan.",
+    "blindYourScores": "Tus puntajes",
+    "blindPick": "Elige un nivel",
+    "blindStart": "Puntuar (empieza en {max})",
+    "blindReveal": "Guardar y ver la calificación de la IA",
+    "blindFailed": "No se guardaron tus puntajes. Inténtalo de nuevo.",
+    "blindResult": "Revisión a ciegas: la IA estuvo dentro de la tolerancia de tu nota en el {within}% de {n} ítems (exactamente igual en el {exact}%). Donde difieren, se mantiene tu puntaje.",
+    "exemplarOff": "Usar como ejemplo de calibración",
+    "exemplarOn": "Ejemplo de calibración ✓",
+    "exemplarHint": "Hasta 3 hojas que calificaste se vuelven ejemplos que la IA sigue en el resto de esta tarea.",
+    "exemplarErrors": {
+      "not_approved": "Primero aprueba la hoja.",
+      "limit": "Esta tarea ya tiene 3 ejemplos. Quita uno primero.",
+      "failed": "No se guardó. Inténtalo de nuevo."
     }
   },
   "release": {
@@ -514,5 +542,87 @@
     "hint": "Imprime etiquetas con nombre para las hojas, o una portada por estudiante. Las hojas con código se asignan solas.",
     "stickers": "Etiquetas con nombre (PDF)",
     "covers": "Portadas (PDF)"
+  },
+  "clusters": {
+    "title": "Calificar por respuesta",
+    "intro": "Los estudiantes que escribieron lo mismo se agrupan. Califica un grupo una vez y se aplica a todos; cada hoja se puede cambiar por separado.",
+    "questions": "Preguntas",
+    "noQuestions": "Agrupar funciona con preguntas numéricas, de respuesta corta y de opción múltiple. Esta tarea no tiene ninguna.",
+    "empty": "Aún no hay respuestas calificadas para esta pregunta.",
+    "blank": "(en blanco o ilegible)",
+    "wrote": "{count, plural, one {# estudiante} other {# estudiantes}}",
+    "currentScores": "Puntajes actuales",
+    "inconsistent": "la misma respuesta tiene puntajes distintos",
+    "whoWrote": "Quién lo escribió",
+    "unmatched": "Sin asignar",
+    "locked": "aprobada",
+    "groupScore": "Puntaje para este grupo",
+    "comment": "Nota para tu registro (opcional)",
+    "apply": "{count, plural, =0 {Nada que cambiar} one {Aplicar a # hoja} other {Aplicar a # hojas}}",
+    "applied": "Aplicado a {applied}. {skipped, plural, =0 {} one {# hoja aprobada no se cambió.} other {# hojas aprobadas no se cambiaron.}}",
+    "applyFailed": "No se guardó. Inténtalo de nuevo.",
+    "gradedAs": "Calificaste este grupo con {score}/{max}."
+  },
+  "settings": {
+    "title": "Ajustes",
+    "blindTitle": "Revisiones a ciegas",
+    "blindHint": "De vez en cuando Tinta oculta su calificación en una hoja para que la califiques tú primero. Comparar ambas te da una idea honesta de cuánto coincide la IA contigo.",
+    "blindRate": "Con qué frecuencia",
+    "blindOff": "Desactivado",
+    "blindPct": "{pct}% de las hojas",
+    "saved": "Guardado",
+    "agreement": "Hasta ahora la IA estuvo dentro de la tolerancia de tu nota en el {within}% de {items} ítems ({checks} revisiones a ciegas).",
+    "commentsTitle": "Banco de comentarios",
+    "commentsHint": "Comentarios que escribes o apruebas, listos para reutilizar.",
+    "styleTitle": "Tu estilo de retroalimentación",
+    "styleHint": "Lo que Tinta aprendió de tus correcciones."
+  },
+  "bank": {
+    "title": "Banco de comentarios",
+    "intro": "Los comentarios que escribes en las hojas, y los de la IA que abres y apruebas tal cual, se guardan aquí para reutilizarlos. Son solo tuyos.",
+    "insert": "Banco de comentarios",
+    "search": "Buscar comentarios",
+    "loading": "Cargando…",
+    "empty": "Tu banco está vacío. Se llena a medida que escribes y apruebas comentarios.",
+    "noMatch": "Ningún comentario coincide.",
+    "add": "Agregar un comentario",
+    "text": "Comentario",
+    "subject": "Materia (opcional)",
+    "tags": "Etiquetas",
+    "tagsHint": "p. ej. fracciones, signos",
+    "allTags": "Todas las etiquetas",
+    "language": "Idioma",
+    "save": "Guardar comentario",
+    "uses": "{count, plural, one {usado 1 vez} other {usado # veces}}",
+    "fromAi": "aprobado de la IA",
+    "delete": "Eliminar comentario",
+    "errors": {
+      "invalid": "Escribe al menos 3 caracteres.",
+      "duplicate": "Ese comentario ya está en tu banco.",
+      "failed": "No se guardó. Inténtalo de nuevo."
+    }
+  },
+  "style": {
+    "title": "Tu estilo de retroalimentación",
+    "intro": "Cada noche Tinta mira cómo cambiaste sus puntajes y comentarios, y anota tu estilo para que los nuevos borradores suenen más a ti. Aprende solo de tus correcciones y solo para ti: nunca se comparte ni se usa para entrenar un modelo. Antes se quitan los nombres de los estudiantes.",
+    "none": "Aún no hay perfil. Se crea cuando hayas hecho unas 10 correcciones ({edits} hasta ahora).",
+    "version": "Perfil v{version}",
+    "built": "Actualizado el {date} con tus últimas {edits} correcciones.",
+    "tone": "Tono",
+    "praise": "Elogios",
+    "corrections": "Correcciones",
+    "length": "Comentario típico",
+    "words": "unas {n} palabras",
+    "likes": "Sueles escribir",
+    "avoids": "Sueles quitar",
+    "strictness": "Medido a partir de tus cambios de puntaje",
+    "lenient": "das un {pct}% de los puntos más que la IA (n={n})",
+    "stricter": "das un {pct}% de los puntos menos que la IA (n={n})",
+    "refresh": "Actualizar ahora",
+    "queued": "Actualizando; vuelve en un minuto.",
+    "failed": "No funcionó. Inténtalo más tarde.",
+    "reset": "Olvidar mi estilo",
+    "resetConfirm": "Sí, borrar el perfil",
+    "resetDone": "Borrado. Los nuevos borradores no usarán un perfil hasta que se reconstruya."
   }
 }

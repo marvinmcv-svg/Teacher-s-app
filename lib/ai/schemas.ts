@@ -155,3 +155,28 @@ export const FeedbackJudgeSchema = z.object({
   notes: z.string(),
 });
 export type FeedbackJudge = z.infer<typeof FeedbackJudgeSchema>;
+
+/** Nightly teacher style profile (§3.7), distilled from this teacher's own edits only. */
+export const StyleDistillSchema = z.object({
+  summary: z.string().describe("2-3 sentences describing how this teacher writes feedback"),
+  preferred_phrases: z.array(z.string()).describe("phrases or openings the teacher adds or keeps"),
+  avoid_phrases: z.array(z.string()).describe("phrases the teacher removes or never uses"),
+  typical_length: z.enum(["very_short", "short", "medium", "long"]),
+  tone: z.string().describe("one sentence"),
+  praise_style: z.string().describe("one sentence"),
+  correction_style: z.string().describe("one sentence"),
+});
+export type StyleDistill = z.infer<typeof StyleDistillSchema>;
+
+/** Mini-lesson for a misconception cluster (§3.6). */
+export const MiniLessonSchema = z.object({
+  title: z.string(),
+  objective: z.string(),
+  minutes: z.number().int(),
+  warm_up: z.string(),
+  explanation: z.string().describe("teacher-facing, how to address the misconception; LaTeX for math"),
+  worked_example: z.string(),
+  practice: z.array(z.string()).describe("3-5 practice items, increasing difficulty"),
+  exit_ticket: z.string(),
+});
+export type MiniLesson = z.infer<typeof MiniLessonSchema>;

@@ -1,44 +1,16 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { callStructured } from "@/lib/ai/client";
 import { AiOutputError, AiRefusalError, MissingConfigError } from "@/lib/ai/errors";
 import { REGENERATE_PROMPT_VERSION, regenerateSystem, regenerateUserText } from "@/lib/ai/prompts/misc";
 import { RegenerateSchema } from "@/lib/ai/schemas";
-import { canApprove, effectiveTotal, greenSampleRequired } from "@/lib/grading/review-rules";
-import type { Json } from "@/lib/db/types";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { canApprove, greenSampleRequired } from "@/lib/grading/review-rules";
+import { renderStyleProfile, type StoredProfile } from "@/lib/style/profile";
+import { addToBank, bankContext } from "./comment-bank-store";
+import { recordEdit, refreshTotals, requireTeacher, type Supa } from "./helpers";
 
 const WELLBEING_ACK = "wellbeing_acknowledged";
-type Supa = Awaited<ReturnType<typeof createSupabaseServerClient>>;
-
-async function requireTeacher() {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) redirect("/login");
-  return { supabase, user: data.user };
-}
-
-/** Every teacher change is stored as a before/after diff (§3.7) — signal for this teacher only. */
-async function recordEdit(
-  supabase: Supa,
-  teacherId: string,
-  submissionId: string,
-  table: string,
-  id: string,
-  before: unknown,
-  after: unknown,
-) {
-  await supabase.from("teacher_edits").insert({
-    teacher_id: teacherId,
-    submission_id: submissionId,
-    target_table: table,
-    target_id: id,
-    before: (before ?? null) as Json,
-    after: (after ?? null) as Json,
-  });
-}
 
 async function editableSubmission(supabase: Supa, submissionId: string) {
   const { data } = await supabase
@@ -48,15 +20,6 @@ async function editableSubmission(supabase: Supa, submissionId: string) {
     .maybeSingle();
   if (!data || data.status === "released") return null; // released work is read-only (reopen first)
   return data;
-}
-
-async function refreshTotals(supabase: Supa, submissionId: string) {
-  const { data: items } = await supabase
-    .from("criterion_scores")
-    .select("ai_score, teacher_score, ai_max")
-    .eq("submission_id", submissionId);
-  const t = effectiveTotal(items ?? []);
-  await supabase.from("submissions").update({ total_score: t.score, total_max: t.max }).eq("id", submissionId);
 }
 
 const uuid = z.uuid();
@@ -184,6 +147,12 @@ export async function updateAnnotation(
   const { data: a } = await supabase.from("annotations").select("*").eq("id", id).maybeSingle();
   if (!a || !(await editableSubmission(supabase, a.submission_id))) return { ok: false };
   await supabase.from("annotations").update(p.data).eq("id", id);
+  if (p.data.text && p.data.text !== a.text) {
+    const ctx = await bankContext(supabase, a.submission_id);
+    await addToBank(supabase, user.id, [
+      { text: p.data.text, ...ctx, tags: [p.data.kind ?? a.kind], source: "teacher" },
+    ]);
+  }
   await recordEdit(
     supabase,
     user.id,
@@ -232,6 +201,9 @@ export async function addAnnotation(
     .single();
   if (error || !data) return { ok: false as const };
   await recordEdit(supabase, user.id, submissionId, "annotations", data.id, null, { text: p.data.t, kind });
+  await addToBank(supabase, user.id, [
+    { text: p.data.t, ...(await bankContext(supabase, submissionId)), tags: [kind], source: "teacher" },
+  ]);
   return { ok: true as const, id: data.id };
 }
 
@@ -241,7 +213,7 @@ export type RegenerateResult =
 /** "Regenerate this comment" with a teacher hint (§3.4). The new text is a suggestion until saved. */
 export async function regenerateComment(annotationId: string, instruction: string): Promise<RegenerateResult> {
   if (!uuid.safeParse(annotationId).success) return { ok: false, error: "failed" };
-  const { supabase } = await requireTeacher();
+  const { supabase, user } = await requireTeacher();
   const { data: a } = await supabase
     .from("annotations")
     .select("text, anchor_line_keys, submission_id")
@@ -264,6 +236,13 @@ export async function regenerateComment(annotationId: string, instruction: strin
         .eq("redacted", false)
         .in("line_key", a.anchor_line_keys)
     : { data: [] as { text: string }[] };
+  const { data: profile } = await supabase
+    .from("style_profiles")
+    .select("profile")
+    .eq("teacher_id", user.id)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   try {
     const out = await callStructured({
       role: "regenerate",
@@ -274,6 +253,7 @@ export async function regenerateComment(annotationId: string, instruction: strin
         a.text,
         (lines ?? []).map((l) => l.text).join("\n"),
         instruction.slice(0, 300) || "Make it clearer.",
+        renderStyleProfile(profile?.profile as StoredProfile | undefined),
       ),
       schema: RegenerateSchema,
     });
@@ -288,8 +268,23 @@ export async function regenerateComment(annotationId: string, instruction: strin
 
 export type ApproveResult = { ok: true } | { ok: false; error: "unreviewed" | "wellbeing" | "not_ready" | "failed" };
 
-export async function approveSubmission(submissionId: string): Promise<ApproveResult> {
-  if (!uuid.safeParse(submissionId).success) return { ok: false, error: "failed" };
+const ApproveMetaSchema = z.object({
+  reviewSeconds: z
+    .number()
+    .int()
+    .min(0)
+    .max(24 * 3600)
+    .optional(),
+  /** AI pins the teacher opened — approved unchanged, they grow the comment bank (§3.7). */
+  openedPins: z.array(z.uuid()).max(200).optional(),
+});
+
+export async function approveSubmission(
+  submissionId: string,
+  meta: z.input<typeof ApproveMetaSchema> = {},
+): Promise<ApproveResult> {
+  const m = ApproveMetaSchema.safeParse(meta);
+  if (!uuid.safeParse(submissionId).success || !m.success) return { ok: false, error: "failed" };
   const { supabase, user } = await requireTeacher();
   const { data: sub } = await supabase
     .from("submissions")
@@ -314,13 +309,42 @@ export async function approveSubmission(submissionId: string): Promise<ApproveRe
   if (!verdict.ok) return { ok: false, error: verdict.reason };
   const { error } = await supabase
     .from("submissions")
-    .update({ status: "approved", approved_by: user.id, approved_at: new Date().toISOString() })
+    .update({
+      status: "approved",
+      approved_by: user.id,
+      approved_at: new Date().toISOString(),
+      ...(m.data.reviewSeconds !== undefined ? { review_seconds: m.data.reviewSeconds } : {}),
+    })
     .eq("id", submissionId)
     .eq("status", "ready");
   if (error) return { ok: false, error: "failed" };
   await supabase
     .from("audit_log")
     .insert({ actor_id: user.id, action: "submission.approved", entity: "submission", entity_id: submissionId });
+  if (m.data.openedPins?.length) {
+    // AI comments the teacher opened and approved as they were (§3.7). Edited ones were banked on edit.
+    const { data: opened } = await supabase
+      .from("annotations")
+      .select("id, text, kind")
+      .eq("submission_id", submissionId)
+      .eq("author", "ai")
+      .eq("hidden", false)
+      .in("id", m.data.openedPins);
+    const { data: edits } = await supabase
+      .from("teacher_edits")
+      .select("target_id")
+      .eq("submission_id", submissionId)
+      .eq("target_table", "annotations");
+    const edited = new Set((edits ?? []).map((e) => e.target_id));
+    const ctx = await bankContext(supabase, submissionId);
+    await addToBank(
+      supabase,
+      user.id,
+      (opened ?? [])
+        .filter((a) => !edited.has(a.id))
+        .map((a) => ({ text: a.text, ...ctx, tags: [a.kind], source: "ai_approved" as const })),
+    );
+  }
   await maybeMarkReviewing(supabase, sub.assignment_id);
   revalidatePath(`/assignments/${sub.assignment_id}`);
   return { ok: true };
@@ -372,15 +396,13 @@ export async function approveAllGreen(assignmentId: string): Promise<ApproveGree
     const res = await approveSubmission(s.id); // same server-side gating per submission
     if (res.ok) approved++;
   }
-  await supabase
-    .from("audit_log")
-    .insert({
-      actor_id: user.id,
-      action: "assignment.approve_all_green",
-      entity: "assignment",
-      entity_id: assignmentId,
-      meta: { approved },
-    });
+  await supabase.from("audit_log").insert({
+    actor_id: user.id,
+    action: "assignment.approve_all_green",
+    entity: "assignment",
+    entity_id: assignmentId,
+    meta: { approved },
+  });
   return { ok: true, approved };
 }
 

@@ -13,7 +13,8 @@
     "themeSystem": "System",
     "skipToContent": "Skip to content",
     "mainNav": "Main navigation",
-    "demo": "Demo"
+    "demo": "Demo",
+    "settings": "Settings"
   },
   "setup": {
     "title": "Tinta isn't configured yet",
@@ -49,7 +50,9 @@
     "noClassesHint": "Create your first class and add students by pasting a list or uploading a CSV.",
     "newClass": "New class",
     "studentCount": "{count, plural, =0 {No students} one {# student} other {# students}}",
-    "nextUp": "Coming next: create assignments and scan the stack of papers."
+    "nextUp": "Coming next: create assignments and scan the stack of papers.",
+    "agreementTitle": "AI agreement",
+    "agreementDetail": "within tolerance of your own grade · {items} items in {checks} blind checks, last 90 days"
   },
   "classes": {
     "newTitle": "New class",
@@ -264,7 +267,16 @@
       "missing_file": "The upload didn't finish. Upload the PDF again.",
       "empty": "The PDF has no pages.",
       "pipeline_error": "Something went wrong while splitting. Upload the PDF again."
-    }
+    },
+    "tools": "Assignment tools",
+    "gradeByAnswer": "Grade by answer",
+    "insights": "Insights",
+    "costs": "Cost & quality",
+    "calibrationTitle": "{count, plural, =0 {No calibration examples yet} one {# calibration example} other {# calibration examples}} (max 3)",
+    "calibrationHint": "Optional: grade 2–3 papers yourself, approve them and mark them as examples. The AI then follows your strictness for the rest.",
+    "calibrationOn": "New grading uses your examples. Papers you haven't opened yet can be regraded with them.",
+    "regradeUntouched": "Regrade unopened papers",
+    "regradedUntouched": "{count, plural, =0 {Nothing to regrade.} one {# paper queued.} other {# papers queued.}}"
   },
   "stages": {
     "uploading": "Uploading",
@@ -454,6 +466,22 @@
       "unclear": "Unclear",
       "praise": "Praise",
       "note": "Note"
+    },
+    "blindTitle": "Blind check: grade this one first",
+    "blindBody": "You asked Tinta to sometimes hide its grade. Score each item from the page; then you'll see what the AI gave and how often you agree. Your scores are kept.",
+    "blindYourScores": "Your scores",
+    "blindPick": "Choose a level",
+    "blindStart": "Score it (starts at {max})",
+    "blindReveal": "Save and show the AI's grade",
+    "blindFailed": "Your scores didn't save. Try again.",
+    "blindResult": "Blind check: the AI was within tolerance of your grade on {within}% of {n} items (exactly the same on {exact}%). Where you differed, your score is the one kept.",
+    "exemplarOff": "Use as a calibration example",
+    "exemplarOn": "Calibration example ✓",
+    "exemplarHint": "Up to 3 papers you graded become examples the AI follows for the rest of this assignment.",
+    "exemplarErrors": {
+      "not_approved": "Approve the paper first.",
+      "limit": "This assignment already has 3 examples. Remove one first.",
+      "failed": "That didn't save. Try again."
     }
   },
   "release": {
@@ -514,5 +542,87 @@
     "hint": "Print name stickers for worksheets, or one cover sheet per student. Papers with a code are matched automatically.",
     "stickers": "Name stickers (PDF)",
     "covers": "Cover sheets (PDF)"
+  },
+  "clusters": {
+    "title": "Grade by answer",
+    "intro": "Students who wrote the same thing are grouped. Grade a group once and it applies to everyone in it; each paper can still be changed on its own.",
+    "questions": "Questions",
+    "noQuestions": "Grouping works for numeric, short-answer and multiple-choice questions. This assignment has none.",
+    "empty": "No graded answers for this question yet.",
+    "blank": "(blank or unreadable)",
+    "wrote": "{count, plural, one {# student} other {# students}}",
+    "currentScores": "Current scores",
+    "inconsistent": "the same answer got different scores",
+    "whoWrote": "Who wrote this",
+    "unmatched": "Unmatched",
+    "locked": "approved",
+    "groupScore": "Score for this group",
+    "comment": "Note for the teacher record (optional)",
+    "apply": "{count, plural, =0 {Nothing to change} one {Apply to # paper} other {Apply to # papers}}",
+    "applied": "Applied to {applied}. {skipped, plural, =0 {} one {# approved paper was left as is.} other {# approved papers were left as they are.}}",
+    "applyFailed": "That didn't save. Try again.",
+    "gradedAs": "You graded this group {score}/{max}."
+  },
+  "settings": {
+    "title": "Settings",
+    "blindTitle": "Blind checks",
+    "blindHint": "Now and then Tinta hides its grade on a paper so you grade it first. Comparing the two gives you an honest picture of how often the AI agrees with you.",
+    "blindRate": "How often",
+    "blindOff": "Off",
+    "blindPct": "{pct}% of papers",
+    "saved": "Saved",
+    "agreement": "So far the AI was within tolerance of your grade on {within}% of {items} items ({checks} blind checks).",
+    "commentsTitle": "Comment bank",
+    "commentsHint": "Comments you write or approve, ready to reuse.",
+    "styleTitle": "Your feedback style",
+    "styleHint": "What Tinta has learned from your edits."
+  },
+  "bank": {
+    "title": "Comment bank",
+    "intro": "Comments you write on papers, and AI comments you open and approve as they are, are saved here for you to reuse. They are only yours.",
+    "insert": "Comment bank",
+    "search": "Search comments",
+    "loading": "Loading…",
+    "empty": "Your bank is empty. It fills up as you write and approve comments.",
+    "noMatch": "No comments match.",
+    "add": "Add a comment",
+    "text": "Comment",
+    "subject": "Subject (optional)",
+    "tags": "Tags",
+    "tagsHint": "e.g. fractions, signs",
+    "allTags": "All tags",
+    "language": "Language",
+    "save": "Save comment",
+    "uses": "{count, plural, one {used once} other {used # times}}",
+    "fromAi": "approved from AI",
+    "delete": "Delete comment",
+    "errors": {
+      "invalid": "Write at least 3 characters.",
+      "duplicate": "That comment is already in your bank.",
+      "failed": "That didn't save. Try again."
+    }
+  },
+  "style": {
+    "title": "Your feedback style",
+    "intro": "Each night Tinta looks at how you changed its scores and comments, and writes down your style so new drafts sound more like you. It learns from your edits only, for you only — never shared, never used to train a model. Student names are removed first.",
+    "none": "No profile yet. It's built once you've made about 10 edits ({edits} so far).",
+    "version": "Profile v{version}",
+    "built": "Updated {date} from your last {edits} edits.",
+    "tone": "Tone",
+    "praise": "Praise",
+    "corrections": "Corrections",
+    "length": "Typical comment",
+    "words": "about {n} words",
+    "likes": "You often write",
+    "avoids": "You remove",
+    "strictness": "Measured from your score changes",
+    "lenient": "you give {pct}% of the points more than the AI did (n={n})",
+    "stricter": "you give {pct}% of the points less than the AI did (n={n})",
+    "refresh": "Update now",
+    "queued": "Updating — check back in a minute.",
+    "failed": "That didn't work. Try again later.",
+    "reset": "Forget my style",
+    "resetConfirm": "Yes, delete the profile",
+    "resetDone": "Deleted. New drafts won't use a style profile until it's rebuilt."
   }
 }

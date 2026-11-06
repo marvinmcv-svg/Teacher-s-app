@@ -3,13 +3,29 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { agreementSummary } from "@/lib/grading/agreement";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
+
+/** "AI agreement" over the last 90 days of blind checks (§3.4). */
+async function loadAgreement(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, teacherId: string) {
+  const since = new Date(Date.now() - 90 * 86400_000).toISOString();
+  const { data } = await supabase
+    .from("blind_checks")
+    .select("n_items, exact_rate, within_rate")
+    .eq("teacher_id", teacherId)
+    .gte("created_at", since);
+  return {
+    data: agreementSummary(
+      (data ?? []).map((c) => ({ ...c, exact_rate: Number(c.exact_rate), within_rate: Number(c.within_rate) })),
+    ),
+  };
+}
 
 export default async function HomePage() {
   const t = await getTranslations("home");
   const supabase = await createSupabaseServerClient();
   const user = await getCurrentUser();
-  const [{ data: teacher }, { data: classes }, { data: students }] = await Promise.all([
+  const [{ data: teacher }, { data: classes }, { data: students }, { data: checks }] = await Promise.all([
     supabase.from("teachers").select("display_name").eq("id", user!.id).maybeSingle(),
     supabase
       .from("classes")
@@ -17,7 +33,9 @@ export default async function HomePage() {
       .eq("archived", false)
       .order("created_at", { ascending: true }),
     supabase.from("students").select("class_id").eq("active", true),
+    loadAgreement(supabase, user!.id),
   ]);
+  const agreement = checks;
   const counts = new Map<string, number>();
   for (const s of students ?? []) counts.set(s.class_id, (counts.get(s.class_id) ?? 0) + 1);
   const firstName = teacher?.display_name?.split(" ")[0];
@@ -37,6 +55,16 @@ export default async function HomePage() {
           </Link>
         </Button>
       </div>
+
+      {agreement && (
+        <Card className="flex flex-wrap items-baseline gap-x-3 gap-y-1 p-4" data-testid="ai-agreement">
+          <span className="text-sm font-medium uppercase tracking-wide text-ink-muted">{t("agreementTitle")}</span>
+          <span className="tabular font-serif text-3xl">{Math.round(agreement.within * 100)}%</span>
+          <span className="text-sm text-ink-muted">
+            {t("agreementDetail", { checks: agreement.checks, items: agreement.items })}
+          </span>
+        </Card>
+      )}
 
       <section aria-labelledby="classes-heading" className="flex flex-col gap-3">
         <h2 id="classes-heading" className="text-sm font-medium uppercase tracking-wide text-ink-muted">

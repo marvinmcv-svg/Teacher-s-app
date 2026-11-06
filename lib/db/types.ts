@@ -18,5 +18,4 @@ export type AnswerRow = Tables<"answers">;
 export type CriterionScoreRow = Tables<"criterion_scores">;
 export type AnnotationRow = Tables<"annotations">;
 export type FeedbackRow = Tables<"feedback">;
-export type ReleaseRow = Tables<"releases">;
 export type { Json, Tables } from "./database.types";

@@ -1,0 +1,1 @@
+caveat-600.woff — Caveat SemiBold (latin subset), © The Caveat Project Authors, licensed under the SIL Open Font License 1.1 (https://openfontlicense.org). Taken from @fontsource/caveat. Used to draw handwritten comments on marked papers.

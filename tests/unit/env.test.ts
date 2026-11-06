@@ -25,7 +25,7 @@ describe("isPublicPath", () => {
   it.each([
     ["/login", true],
     ["/auth/callback", true],
-    ["/s/abc123", true],
+    ["/s/abc123", false],
     ["/settings", false],
     ["/", false],
     ["/classes/1", false],

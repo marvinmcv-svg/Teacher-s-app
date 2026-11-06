@@ -11,18 +11,16 @@ Have a lawyer review it before selling to schools (§9).
 
 ## What we store (today)
 
-| Data                                                           | Where                      | Notes                                             |
-| -------------------------------------------------------------- | -------------------------- | ------------------------------------------------- |
-| Teacher account (email, name from Google if used, UI language) | Supabase Auth + `teachers` |                                                   |
-| Class name, grade, subject                                     | `classes`                  |                                                   |
-| Student display name, optional external ID                     | `students`                 | No birthdates, no photos of faces.                |
-| QR token per student                                           | `students.qr_code_token`   | Random 128-bit; used for name stickers (Phase 2). |
+| Data                                                           | Where                      | Notes                              |
+| -------------------------------------------------------------- | -------------------------- | ---------------------------------- |
+| Teacher account (email, name from Google if used, UI language) | Supabase Auth + `teachers` |                                    |
+| Class name, grade, subject                                     | `classes`                  |                                    |
+| Student display name, optional external ID                     | `students`                 | No birthdates, no photos of faces. |
 
 | Page images | `pages-original` (normalised; EXIF/GPS stripped on device and again on the server) and `pages-redacted` (name area filled) | Private buckets. Paths are `{teacher}/{assignment}/{submission}/…` |
 | OCR lines, transcriptions, scores, pins, feedback | Postgres | Name/header OCR lines are flagged `redacted` and never sent to an LLM |
 | Model call log | `grading_runs` | Model, tokens, cost, latency and the model's JSON output (for audit and evals). No student names: the inputs are redacted |
 | Teacher edits | `teacher_edits` | Before/after diffs, for this teacher's style learning only |
-| Release tokens | `releases` | 256-bit, revocable, optional expiry, `viewed_at` |
 
 Capture queue: photos wait in the teacher's browser (IndexedDB) until they upload, and are deleted from the device once stored. Phones are often shared, so teachers should sign out on shared devices; signing out also clears cached pages.
 
@@ -30,7 +28,7 @@ Capture queue: photos wait in the teacher's browser (IndexedDB) until they uploa
 
 - Row-level security on **every** table. A teacher reaches only rows of classes they own or co-teach. This is verified by `tests/db/rls.test.ts`, which runs in CI against both plain Postgres and real Supabase.
 - Storage buckets are private. Object paths are `{teacher_id}/{assignment_id}/…` and storage policies only let users reach their own prefix. Downloads use signed URLs that expire in ≤ 10 minutes.
-- The public student view (`/s/[token]`, Phase 1) reads through a server route that validates the release token. It never uses a client with broad RLS access. Tokens are ≥ 128-bit random, revocable, and can expire.
+- There is no public or student-facing page. Marked papers leave the app only as files the signed-in teacher downloads (`/api/submissions/[id]/marked.jpg`, `/api/assignments/[id]/marked.zip`); both check through RLS that the teacher can see the work before reading it.
 
 ## Processors (sub-processors)
 
@@ -49,7 +47,7 @@ Capture queue: photos wait in the teacher's browser (IndexedDB) until they uploa
 
 - Deleting an assignment is a soft delete. Its images are hard-deleted after 30 days.
 - Original images are auto-deleted at the end of the school year by default (configurable).
-- An audit log records releases, exports, deletions and role changes.
+- An audit log records approvals, deletions and role changes.
 
 ## Safeguarding
 

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getPublicEnv, isSupabaseConfigured } from "@/lib/env";
 
 /** Paths reachable without a teacher session. */
-export const PUBLIC_PREFIXES = ["/login", "/auth", "/setup", "/s", "/api/inngest", "/api/health"];
+export const PUBLIC_PREFIXES = ["/login", "/auth", "/setup", "/api/inngest", "/api/health"];
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));

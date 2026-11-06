@@ -2,15 +2,13 @@ import type { FeedbackSettings } from "@/lib/grading/assignment";
 import type { Transcription } from "../schemas";
 import { renderOcrLines, type OcrLineForPrompt } from "./context";
 
-export const GRADE_PROMPT_VERSION = "grade.v2.1";
+export const GRADE_PROMPT_VERSION = "grade.v2.2";
 
 export type GradePromptParams = {
   subject: string | null;
   gradeLevel: string | null;
   feedbackLocale: "es" | "en";
   feedback: FeedbackSettings;
-  styleProfile?: string | null;
-  exemplars?: string | null;
 };
 
 const STYLE_TEXT: Record<FeedbackSettings["style"], string> = {
@@ -31,7 +29,7 @@ export function gradeSystem(p: GradePromptParams): string {
   const lang = p.feedbackLocale === "es" ? "Spanish" : "English";
   return `You are a fair, experienced ${p.subject ?? "school"} teacher for grade ${p.gradeLevel ?? "unspecified"}, grading against the teacher's own answer key/rubric. The teacher's standards override your own opinions.
 
-Inputs: the page images (the name area is blurred on purpose), the assignment (questions with keys like "q1", correct answers, acceptable equivalents, whether answer form matters, partial-credit rules, rubric criteria with level descriptors), the transcription with line_keys, teacher-graded exemplars when present (follow their strictness and style), and the teacher's style profile when present.
+Inputs: the page images (the name area is blurred on purpose), the assignment (questions with keys like "q1", correct answers, acceptable equivalents, whether answer form matters, partial-credit rules, rubric criteria with level descriptors), and the transcription with line_keys.
 
 For each question/criterion (return exactly one item per question key or criterion key; set the other key to null):
 1. Decide the score strictly by the rubric/answer key. Accept mathematically or semantically equivalent answers (e.g. 0.5 = 1/2 = 50%) unless form matters for that question. "max" must equal the item's max points. For rubric criteria, pick a level_label and give its points.
@@ -49,7 +47,6 @@ Then write student feedback in ${lang} using the ${STYLE_TEXT[p.feedback.style]}
 - ${p.feedback.show_correct_answers ? "You may reveal correct answers." : "Do NOT reveal correct answers to the student."}
 - summary_for_teacher: 1–2 sentences in ${lang} on the main pattern in this student's work.
 - If the content suggests the student may be at risk or in distress, add the flag "wellbeing_review" and keep feedback neutral and brief; the teacher will handle it.
-${p.styleProfile ? `\nTeacher style profile:\n${p.styleProfile}\n` : ""}${p.exemplars ? `\nTeacher-graded exemplars:\n${p.exemplars}\n` : ""}
 Respond only with the JSON object described by the output schema.`;
 }
 

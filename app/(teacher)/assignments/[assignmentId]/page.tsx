@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, ClipboardCheck, Download, Send } from "lucide-react";
+import { ArrowLeft, Camera, ClipboardCheck, Download } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -44,6 +44,7 @@ export default async function AssignmentPage({ params }: PageProps<"/assignments
   const toReview = list.filter((s) => s.status === "ready").length;
   const processing = list.filter((s) => ["uploading", "queued", "processing"].includes(s.status)).length;
   const attention = list.filter((s) => s.status === "needs_attention").length;
+  const approvedCount = list.filter((s) => s.status === "approved").length;
   const covered = new Set(list.map((s) => s.student_id).filter(Boolean));
   const missing = (roster ?? []).filter((s) => !covered.has(s.id)).length;
   const cls = a.classes as unknown as { id: string; name: string } | null;
@@ -81,16 +82,13 @@ export default async function AssignmentPage({ params }: PageProps<"/assignments
               {toReview + attention ? t("hub.reviewCount", { count: toReview + attention }) : t("hub.review")}
             </Link>
           </Button>
-          <Button asChild variant="outline" size="lg">
-            <Link href={`/assignments/${a.id}/release`}>
-              <Send aria-hidden /> {t("hub.release")}
-            </Link>
-          </Button>
-          <Button asChild variant="ghost" size="lg">
-            <a href={`/api/assignments/${a.id}/export.csv`} download>
-              <Download aria-hidden /> {t("hub.exportCsv")}
-            </a>
-          </Button>
+          {approvedCount > 0 && (
+            <Button asChild variant="outline" size="lg">
+              <a href={`/api/assignments/${a.id}/marked.zip`} download>
+                <Download aria-hidden /> {t("download.zip", { count: approvedCount })}
+              </a>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -111,8 +109,7 @@ export default async function AssignmentPage({ params }: PageProps<"/assignments
           <Card>
             <ul className="divide-y divide-rule" data-testid="submission-list">
               {list.map((s) => {
-                const stage =
-                  s.status === "approved" || s.status === "released" ? s.status : (s.processing_stage ?? s.status);
+                const stage = s.status === "approved" ? s.status : (s.processing_stage ?? s.status);
                 const busy = ["uploading", "queued", "reading", "grading", "checking"].includes(stage);
                 const scaled =
                   scale.success && s.total_max ? toScale(scale.data, Number(s.total_score), Number(s.total_max)) : null;
@@ -143,19 +140,11 @@ export default async function AssignmentPage({ params }: PageProps<"/assignments
                     ) : (
                       <StatusChip
                         label={t(`stages.${stage}`)}
-                        tone={
-                          busy
-                            ? "busy"
-                            : stage === "failed"
-                              ? "warn"
-                              : stage === "approved" || stage === "released"
-                                ? "good"
-                                : "neutral"
-                        }
+                        tone={busy ? "busy" : stage === "failed" ? "warn" : stage === "approved" ? "good" : "neutral"}
                       />
                     )}
                     {s.status === "needs_attention" && <RegradeButton submissionId={s.id} />}
-                    {(s.status === "ready" || s.status === "approved" || s.status === "released") && (
+                    {(s.status === "ready" || s.status === "approved") && (
                       <Button asChild variant="ghost">
                         <Link href={`/assignments/${a.id}/review/${s.id}`}>{t("hub.review")}</Link>
                       </Button>

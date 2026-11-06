@@ -1,5 +1,15 @@
 "use client";
-import { AlertTriangle, ChevronLeft, ChevronRight, Eye, EyeOff, RotateCcw, Sparkles, Stamp } from "lucide-react";
+import {
+  AlertTriangle,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  RotateCcw,
+  Sparkles,
+  Stamp,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -9,11 +19,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldError, Input, Label, Select, Textarea } from "@/components/ui/input";
 import { setSubmissionStudent } from "@/lib/actions/capture";
 import {
-  acknowledgeItem,
   acknowledgeWellbeing,
   addAnnotation,
   approveSubmission,
-  markOpened,
   regenerateComment,
   reopenSubmission,
   setItemScore,
@@ -87,7 +95,7 @@ export function ReviewScreen({ data }: { data: ReviewData }) {
   const tc = useTranslations("confidence");
   const router = useRouter();
   const { submission: sub, assignment } = data;
-  const readOnly = sub.status === "released";
+  const readOnly = sub.status !== "ready";
   const reviewable = sub.status === "ready";
   const [items, setItems] = useState(data.items);
   const [pins, setPins] = useState(data.pins);
@@ -101,12 +109,7 @@ export function ReviewScreen({ data }: { data: ReviewData }) {
   const feedbackRef = useRef<HTMLTextAreaElement>(null);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
 
-  useEffect(() => {
-    if (!sub.opened) void markOpened(sub.id); // counts toward the green sample (§3.4)
-  }, [sub.id, sub.opened]);
-
   const effective = (i: Item) => i.teacherScore ?? i.aiScore;
-  const blocking = items.filter((i) => i.teacherScore === null && i.band !== "high" && !i.acknowledged);
   const needsWellbeing = sub.flags.includes("wellbeing_review") && !wellbeingAck;
   const total = items.reduce((s, i) => s + effective(i), 0);
   const max = items.reduce((s, i) => s + i.max, 0);
@@ -126,11 +129,6 @@ export function ReviewScreen({ data }: { data: ReviewData }) {
       if (!res.ok) setItems((xs) => xs.map((x) => (x.id === item.id ? item : x)));
     });
   }, []);
-
-  const ack = (item: Item) => {
-    setItems((xs) => xs.map((x) => (x.id === item.id ? { ...x, acknowledged: true } : x)));
-    start(async () => void (await acknowledgeItem(item.id)));
-  };
 
   const approve = useCallback(() => {
     setApproveError(null);
@@ -254,36 +252,45 @@ export function ReviewScreen({ data }: { data: ReviewData }) {
             {showTx ? t("hideTranscription") : t("showTranscription")} (T)
           </Button>
           {data.pages.map((p) => (
-            <PageViewer
-              key={p.id}
-              page={p}
-              pins={pins.filter((x) => x.page_id === p.id)}
-              lines={data.lines.filter((l) => l.pageId === p.id)}
-              lowConfidenceKeys={lowConfidenceKeys}
-              showTranscription={showTx}
-              selectedPin={selectedPin}
-              onSelectPin={setSelectedPin}
-              readOnly={readOnly}
-              onAddNote={async (region, text, kind) => {
-                const res = await addAnnotation(sub.id, p.id, region, text, kind);
-                if (res.ok)
-                  setPins((ps) => [
-                    ...ps,
-                    {
-                      id: res.id,
-                      page_id: p.id,
-                      kind,
-                      region,
-                      approximate: false,
-                      text,
-                      author: "teacher",
-                      hidden: false,
-                      position: ps.length + 1,
-                      anchor_line_keys: [],
-                    },
-                  ]);
-              }}
-            />
+            <div key={p.id} className="flex flex-col gap-1">
+              <PageViewer
+                key={p.id}
+                page={p}
+                pins={pins.filter((x) => x.page_id === p.id)}
+                lines={data.lines.filter((l) => l.pageId === p.id)}
+                lowConfidenceKeys={lowConfidenceKeys}
+                showTranscription={showTx}
+                selectedPin={selectedPin}
+                onSelectPin={setSelectedPin}
+                readOnly={readOnly}
+                onAddNote={async (region, text, kind) => {
+                  const res = await addAnnotation(sub.id, p.id, region, text, kind);
+                  if (res.ok)
+                    setPins((ps) => [
+                      ...ps,
+                      {
+                        id: res.id,
+                        page_id: p.id,
+                        kind,
+                        region,
+                        approximate: false,
+                        text,
+                        author: "teacher",
+                        hidden: false,
+                        position: ps.length + 1,
+                        anchor_line_keys: [],
+                      },
+                    ]);
+                }}
+              />
+              <a
+                href={`/api/submissions/${sub.id}/marked.jpg?page=${p.position}`}
+                download
+                className="inline-flex min-h-11 items-center gap-1 self-start text-sm text-pen-blue hover:underline"
+              >
+                <Download aria-hidden className="size-4" /> {t("downloadPage", { n: p.position })}
+              </a>
+            </div>
           ))}
         </div>
 
@@ -307,7 +314,6 @@ export function ReviewScreen({ data }: { data: ReviewData }) {
                   onFocus={() => setFocused(i)}
                   readOnly={!reviewable}
                   onScore={(v, level) => setScore(item, v, level)}
-                  onAck={() => ack(item)}
                   bandLabel={item.band ? tc(item.band) : null}
                 />
               ))}
@@ -335,16 +341,8 @@ export function ReviewScreen({ data }: { data: ReviewData }) {
           <Card className={cn("sticky bottom-2 z-10 flex flex-col gap-2 p-4 shadow-md", stamped && "border-pen-green")}>
             {sub.status === "ready" && (
               <>
-                {blocking.length > 0 && (
-                  <p className="text-sm text-pen-amber">{t("approveBlocked", { count: blocking.length })}</p>
-                )}
                 {approveError && <FieldError>{approveError}</FieldError>}
-                <Button
-                  size="lg"
-                  onClick={approve}
-                  disabled={pending || blocking.length > 0 || needsWellbeing}
-                  data-testid="approve"
-                >
+                <Button size="lg" onClick={approve} disabled={pending || needsWellbeing} data-testid="approve">
                   <Stamp aria-hidden /> {pending ? t("approving") : `${t("approve")} (A)`}
                 </Button>
               </>
@@ -369,7 +367,6 @@ export function ReviewScreen({ data }: { data: ReviewData }) {
                 )}
               </div>
             )}
-            {sub.status === "released" && <StatusChip label={t("approvedStamp")} tone="good" />}
             <p className="hidden text-xs text-ink-muted md:block">{t("shortcuts")}</p>
           </Card>
         </div>
@@ -432,7 +429,6 @@ function ItemCard({
   onFocus,
   readOnly,
   onScore,
-  onAck,
   bandLabel,
 }: {
   item: Item;
@@ -441,13 +437,12 @@ function ItemCard({
   onFocus: () => void;
   readOnly: boolean;
   onScore: (v: number, level: string | null) => void;
-  onAck: () => void;
   bandLabel: string | null;
 }) {
   const t = useTranslations("review");
   const score = item.teacherScore ?? item.aiScore;
   const deduction = score < item.max;
-  const needsYou = item.teacherScore === null && item.band !== "high" && !item.acknowledged;
+  const needsYou = item.teacherScore === null && item.band === "low"; // a hint where to look, not a gate
   return (
     <section
       ref={ref}
@@ -522,23 +517,6 @@ function ItemCard({
         <p className="pt-1">{item.rationale}</p>
         {deduction && item.teacherScore === null && <p className="pt-1 text-xs text-pen-amber">{t("deductionNote")}</p>}
       </details>
-
-      {!readOnly && item.teacherScore === null && item.band !== "high" && (
-        <Button
-          variant={needsYou ? "outline" : "ghost"}
-          onClick={onAck}
-          disabled={!needsYou}
-          className="self-start"
-          aria-describedby={needsYou ? `${item.id}-needs` : undefined}
-        >
-          {needsYou ? t("acknowledge") : t("acknowledged")}
-        </Button>
-      )}
-      {needsYou && (
-        <p id={`${item.id}-needs`} className="sr-only">
-          {t("needsYou")}
-        </p>
-      )}
     </section>
   );
 }

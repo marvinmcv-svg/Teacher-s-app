@@ -5,9 +5,8 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { ConfidenceChip, StatusChip } from "@/components/chips";
 import { Card } from "@/components/ui/card";
-import { greenSampleRequired } from "@/lib/grading/review-rules";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ApproveGreen } from "./approve-green";
+import { BulkActions } from "./bulk-actions";
 import { loadReviewQueue } from "./queue";
 
 export default async function ReviewQueuePage({ params }: PageProps<"/assignments/[assignmentId]/review">) {
@@ -15,11 +14,7 @@ export default async function ReviewQueuePage({ params }: PageProps<"/assignment
   if (!z.uuid().safeParse(assignmentId).success) notFound();
   const t = await getTranslations();
   const supabase = await createSupabaseServerClient();
-  const { data: a } = await supabase
-    .from("assignments")
-    .select("id, title, review_sample_pct")
-    .eq("id", assignmentId)
-    .maybeSingle();
+  const { data: a } = await supabase.from("assignments").select("id, title").eq("id", assignmentId).maybeSingle();
   if (!a) notFound();
   const queue = await loadReviewQueue(a.id);
   const ready = queue.filter((s) => s.status === "ready");
@@ -27,13 +22,9 @@ export default async function ReviewQueuePage({ params }: PageProps<"/assignment
     low: ready.filter((s) => s.confidence === "low").length,
     medium: ready.filter((s) => s.confidence === "medium").length,
     high: ready.filter((s) => s.confidence === "high").length,
-    approved: queue.filter((s) => s.status === "approved" || s.status === "released").length,
+    approved: queue.filter((s) => s.status === "approved").length,
     attention: queue.filter((s) => s.status === "needs_attention").length,
   };
-  const green = ready.filter((s) => s.confidence === "high" && s.flags.length === 0);
-  const required = greenSampleRequired(green.length, a.review_sample_pct);
-  const opened = green.filter((s) => s.opened_at).length;
-  const hasUnopenedGreen = green.some((s) => !s.opened_at);
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,15 +51,7 @@ export default async function ReviewQueuePage({ params }: PageProps<"/assignment
         ))}
       </dl>
 
-      {green.length > 0 && (
-        <ApproveGreen
-          assignmentId={a.id}
-          count={green.length}
-          opened={opened}
-          required={required}
-          hasUnopened={hasUnopenedGreen}
-        />
-      )}
+      <BulkActions assignmentId={a.id} ready={ready.length} approved={counts.approved} />
 
       {queue.length === 0 ? (
         <Card className="p-6 text-ink-muted">{t("review.empty")}</Card>

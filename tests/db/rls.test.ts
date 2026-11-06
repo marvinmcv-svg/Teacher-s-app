@@ -135,13 +135,10 @@ beforeAll(async () => {
         `${teacher}/x/p1.jpg`,
       ]);
       await q("insert into public.feedback (submission_id, locale) values ($1, 'es')", [ids[`submission${key}`]]);
-      await q("insert into public.releases (submission_id, token, channel) values ($1, $2, 'link')", [
-        ids[`submission${key}`],
-        randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, ""),
-      ]);
-      await q("insert into public.comment_bank (teacher_id, locale, text) values ($1, 'es', 'Revisa el signo')", [
-        teacher,
-      ]);
+      await q(
+        "insert into public.audit_log (actor_id, action, entity, entity_id) values ($1, 'submission.approved', 'submission', $2)",
+        [teacher, ids[`submission${key}`]],
+      );
     });
   }
   // A adds C as co-teacher of class A
@@ -166,7 +163,7 @@ afterAll(async () => {
   await admin.end();
 });
 
-const CLASS_SCOPED = ["classes", "students", "assignments", "submissions", "pages", "feedback", "releases"] as const;
+const CLASS_SCOPED = ["classes", "students", "assignments", "submissions", "pages", "feedback"] as const;
 
 describe("RLS: teacher isolation", () => {
   it("every public table has RLS enabled", async () => {
@@ -180,7 +177,7 @@ describe("RLS: teacher isolation", () => {
   it("teacher A sees exactly their own rows", async () => {
     for (const t of CLASS_SCOPED) expect(await count(A, `public.${t}`), t).toBe(1);
     // (other teachers' rows may exist in a shared DB; RLS must hide all of them)
-    expect(await count(A, "public.comment_bank")).toBe(1);
+    expect(await count(A, "public.audit_log")).toBe(1);
     expect(await count(A, "public.teachers")).toBe(1);
   });
 
@@ -190,8 +187,7 @@ describe("RLS: teacher isolation", () => {
     expect(await count(B, "public.assignments", "id = $1", [ids.assignmentA])).toBe(0);
     expect(await count(B, "public.submissions", "id = $1", [ids.submissionA])).toBe(0);
     expect(await count(B, "public.pages", "submission_id = $1", [ids.submissionA])).toBe(0);
-    expect(await count(B, "public.releases", "submission_id = $1", [ids.submissionA])).toBe(0);
-    expect(await count(B, "public.comment_bank", "teacher_id = $1", [A])).toBe(0);
+    expect(await count(B, "public.audit_log", "actor_id = $1", [A])).toBe(0);
     expect(await count(B, "public.teachers", "id = $1", [A])).toBe(0);
   });
 

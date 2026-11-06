@@ -6,7 +6,7 @@ import { callStructured } from "@/lib/ai/client";
 import { AiOutputError, AiRefusalError, MissingConfigError } from "@/lib/ai/errors";
 import { REGENERATE_PROMPT_VERSION, regenerateSystem, regenerateUserText } from "@/lib/ai/prompts/misc";
 import { RegenerateSchema } from "@/lib/ai/schemas";
-import { canApprove, effectiveTotal, greenSampleRequired } from "@/lib/grading/review-rules";
+import { canApprove, effectiveTotal } from "@/lib/grading/review-rules";
 import type { Json } from "@/lib/db/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -46,7 +46,7 @@ async function editableSubmission(supabase: Supa, submissionId: string) {
     .select("id, assignment_id, status, flags")
     .eq("id", submissionId)
     .maybeSingle();
-  if (!data || data.status === "released") return null; // released work is read-only (reopen first)
+  if (!data || data.status !== "ready") return null; // approved work is read-only (reopen first)
   return data;
 }
 
@@ -60,16 +60,6 @@ async function refreshTotals(supabase: Supa, submissionId: string) {
 }
 
 const uuid = z.uuid();
-
-export async function markOpened(submissionId: string) {
-  if (!uuid.safeParse(submissionId).success) return;
-  const { supabase } = await requireTeacher();
-  await supabase
-    .from("submissions")
-    .update({ opened_at: new Date().toISOString() })
-    .eq("id", submissionId)
-    .is("opened_at", null);
-}
 
 export async function setItemScore(scoreId: string, teacherScore: number | null, levelLabel: string | null = null) {
   if (!uuid.safeParse(scoreId).success) return { ok: false };
@@ -93,19 +83,6 @@ export async function setItemScore(scoreId: string, teacherScore: number | null,
     { score: teacherScore ?? item.ai_score },
   );
   await refreshTotals(supabase, item.submission_id);
-  return { ok: true };
-}
-
-export async function acknowledgeItem(scoreId: string) {
-  if (!uuid.safeParse(scoreId).success) return { ok: false };
-  const { supabase } = await requireTeacher();
-  const { data: item } = await supabase
-    .from("criterion_scores")
-    .select("submission_id")
-    .eq("id", scoreId)
-    .maybeSingle();
-  if (!item || !(await editableSubmission(supabase, item.submission_id))) return { ok: false };
-  await supabase.from("criterion_scores").update({ acknowledged_at: new Date().toISOString() }).eq("id", scoreId);
   return { ok: true };
 }
 
@@ -286,7 +263,7 @@ export async function regenerateComment(annotationId: string, instruction: strin
   }
 }
 
-export type ApproveResult = { ok: true } | { ok: false; error: "unreviewed" | "wellbeing" | "not_ready" | "failed" };
+export type ApproveResult = { ok: true } | { ok: false; error: "wellbeing" | "not_ready" | "failed" };
 
 export async function approveSubmission(submissionId: string): Promise<ApproveResult> {
   if (!uuid.safeParse(submissionId).success) return { ok: false, error: "failed" };
@@ -297,20 +274,7 @@ export async function approveSubmission(submissionId: string): Promise<ApproveRe
     .eq("id", submissionId)
     .maybeSingle();
   if (!sub || sub.status !== "ready") return { ok: false, error: "not_ready" };
-  const { data: items } = await supabase
-    .from("criterion_scores")
-    .select("confidence_band, ai_score, ai_max, teacher_score, acknowledged_at")
-    .eq("submission_id", submissionId);
-  const verdict = canApprove(
-    (items ?? []).map((i) => ({
-      ...i,
-      ai_score: i.ai_score === null ? null : Number(i.ai_score),
-      ai_max: i.ai_max === null ? null : Number(i.ai_max),
-      teacher_score: i.teacher_score === null ? null : Number(i.teacher_score),
-    })),
-    sub.flags,
-    sub.flags.includes(WELLBEING_ACK),
-  );
+  const verdict = canApprove(sub.flags, sub.flags.includes(WELLBEING_ACK));
   if (!verdict.ok) return { ok: false, error: verdict.reason };
   const { error } = await supabase
     .from("submissions")
@@ -345,43 +309,25 @@ export async function reopenSubmission(submissionId: string) {
   return { ok: true };
 }
 
-export type ApproveGreenResult =
-  { ok: true; approved: number } | { ok: false; error: "sample_needed"; opened: number; required: number };
-
-/** "Approve all green" — never the default, and only after opening a random sample (§3.4). */
-export async function approveAllGreen(assignmentId: string): Promise<ApproveGreenResult> {
-  const { supabase, user } = await requireTeacher();
-  const { data: a } = await supabase
-    .from("assignments")
-    .select("id, review_sample_pct")
-    .eq("id", assignmentId)
-    .maybeSingle();
-  if (!a) return { ok: false, error: "sample_needed", opened: 0, required: 0 };
-  const { data: green } = await supabase
+/** Bulk approve: every graded paper in the assignment (papers with a wellbeing flag still need their own check). */
+export async function approveAll(assignmentId: string): Promise<{ ok: boolean; approved: number; skipped: number }> {
+  if (!uuid.safeParse(assignmentId).success) return { ok: false, approved: 0, skipped: 0 };
+  const { supabase } = await requireTeacher();
+  const { data: list } = await supabase
     .from("submissions")
-    .select("id, opened_at, flags")
+    .select("id")
     .eq("assignment_id", assignmentId)
-    .eq("status", "ready")
-    .eq("confidence", "high");
-  const list = (green ?? []).filter((s) => s.flags.length === 0);
-  const opened = list.filter((s) => s.opened_at).length;
-  const required = greenSampleRequired(list.length, a.review_sample_pct);
-  if (opened < required) return { ok: false, error: "sample_needed", opened, required };
+    .eq("status", "ready");
   let approved = 0;
-  for (const s of list) {
-    const res = await approveSubmission(s.id); // same server-side gating per submission
+  let skipped = 0;
+  for (const s of list ?? []) {
+    const res = await approveSubmission(s.id);
     if (res.ok) approved++;
+    else skipped++;
   }
-  await supabase
-    .from("audit_log")
-    .insert({
-      actor_id: user.id,
-      action: "assignment.approve_all_green",
-      entity: "assignment",
-      entity_id: assignmentId,
-      meta: { approved },
-    });
-  return { ok: true, approved };
+  revalidatePath(`/assignments/${assignmentId}`);
+  revalidatePath(`/assignments/${assignmentId}/review`);
+  return { ok: true, approved, skipped };
 }
 
 async function maybeMarkReviewing(supabase: Supa, assignmentId: string) {

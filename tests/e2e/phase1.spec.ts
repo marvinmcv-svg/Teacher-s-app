@@ -1,18 +1,18 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import { unzipSync } from "fflate";
 import { makePage } from "../fixtures/fake-providers";
 import { gradeWithFakeProviders, latestSubmissionId, signIn } from "./helpers";
 
 /**
- * Phase 1 core loop (§11): create an assignment → upload a photographed page →
- * grading → review (red items must be checked) → approve → release → the
- * student opens their annotated feedback on a phone.
+ * Core loop: create an assignment → upload a photographed page → grading →
+ * quick review → approve → download the marked papers as a zip named by student.
  *
  * The grading worker is simulated with the real pipeline + test-only fake
  * OCR/LLM providers (helpers.ts); everything else is the real app.
  */
-test("core loop: assignment → scan → grade → review → approve → release → student view", async ({ page, browser }) => {
+test("core loop: assignment → upload → grade → review → approve → download zip", async ({ page }) => {
   const email = `p1-${Date.now()}@tinta.test`;
   await signIn(page, email);
 
@@ -65,64 +65,41 @@ test("core loop: assignment → scan → grade → review → approve → releas
   await expect(page.getByTestId("submission-list")).toContainText("Ana Pérez");
   await expect(page.getByTestId("submission-list")).toContainText("Revisión obligatoria");
 
-  // Review: the harsh/disputed item blocks approval until checked
+  // Quick review: see the marks, adjust a score, approve
   await page.goto(`/assignments/${assignmentId}/review`);
   await page.getByTestId("review-queue").getByText("Ana Pérez").click();
   await expect(page.getByRole("heading", { name: "Ana Pérez" })).toBeVisible();
-  await expect(page.getByText("Las dos revisiones no coinciden")).toBeVisible();
-  await expect(page.getByText("Sign error when moving 2.")).toBeVisible(); // deduction rationale expanded by default
-  const approve = page.getByTestId("approve");
-  await expect(approve).toBeDisabled();
-  await expect(page.getByText("Falta revisar 1 pregunta marcada")).toBeVisible();
+  await expect(page.getByText("Sign error when moving 2.")).toBeVisible(); // deduction rationale shown
+  const pageFigure = page.getByRole("figure", { name: "Página 1" });
+  await expect(pageFigure.getByRole("button", { name: "1. Correcto: ¡Bien simplificado!", exact: true })).toBeVisible();
   // the teacher gives 1 point for the correct method
   const q2 = page.getByTestId("review-item").nth(1);
   await q2.getByRole("button", { name: "Subir puntaje" }).click();
-  await expect(q2.getByLabel("Puntaje", { exact: true })).toHaveValue("0.5");
   await q2.getByRole("button", { name: "Subir puntaje" }).click();
-  await expect(approve).toBeEnabled();
-  // pins anchored on the page
-  const pageFigure = page.getByRole("figure", { name: "Página 1" });
-  await expect(pageFigure.getByRole("button", { name: "1. Correcto: ¡Bien simplificado!", exact: true })).toBeVisible();
-  await expect(
-    pageFigure.getByRole("button", { name: "2. Error: Revisa el signo al pasar el 2.", exact: true }),
-  ).toBeVisible();
+  await expect(q2.getByLabel("Puntaje", { exact: true })).toHaveValue("1");
+  // one marked page can be downloaded straight from the review screen
+  const one = await page.request.get(`/api/submissions/${submissionId}/marked.jpg?page=1`);
+  expect(one.status()).toBe(200);
+  expect(one.headers()["content-type"]).toBe("image/jpeg");
+  expect(one.headers()["content-disposition"]).toContain(encodeURIComponent("Pérez, Ana.jpg"));
   await page.screenshot({ path: "test-results/shots/review.png", fullPage: true });
-  await approve.click();
+  await page.getByTestId("approve").click();
   await expect(page.getByText("Aprobado ✓")).toBeVisible();
 
-  // Release
-  await page.goto(`/assignments/${assignmentId}/release`);
-  await expect(page.getByText("1 trabajo aprobado listo para publicar")).toBeVisible();
-  await page.getByRole("button", { name: "Publicar todos los aprobados" }).click();
-  const copy = page.getByTestId("copy-link");
-  await expect(copy).toBeVisible();
-  const studentUrl = await copy.getAttribute("data-url");
-  expect(studentUrl).toMatch(/\/s\/[A-Za-z0-9_-]{43}$/);
+  // Bulk download: one zip, files named last-name first
+  await page.goto(`/assignments/${assignmentId}/review`);
+  await expect(page.getByTestId("download-zip")).toBeVisible();
+  const zipRes = await page.request.get(`/api/assignments/${assignmentId}/marked.zip`);
+  expect(zipRes.status()).toBe(200);
+  const files = unzipSync(new Uint8Array(await zipRes.body()));
+  expect(Object.keys(files)).toEqual(["Pérez, Ana.jpg"]);
+  const { writeFileSync: save } = await import("node:fs");
+  save("test-results/shots/marked.jpg", files["Pérez, Ana.jpg"]);
 
-  // Gradebook CSV has the teacher-approved grade (3 of 5 → 60 on 1–100)
-  const csv = await page.request.get(`/api/assignments/${assignmentId}/export.csv`);
-  expect(csv.status()).toBe(200);
-  const text = await csv.text();
-  expect(text).toContain("Ana Pérez");
-  expect(text).toMatch(/Ana Pérez,,2,1,3,5,60,1/);
-
-  // Student opens the link on a phone — no login
-  const studentCtx = await browser.newContext({ locale: "en-US" }); // viewer language doesn't matter
-  const s = await studentCtx.newPage();
-  await s.goto(studentUrl!);
-  await expect(s.getByRole("heading", { name: "Fracciones y ecuaciones" })).toBeVisible();
-  await expect(s.getByTestId("student-grade")).toContainText("60");
-  await expect(s.getByText("Lo que hiciste bien")).toBeVisible(); // rendered in the student's feedback language (es)
-  await expect(s.getByText("Fracción correcta en la 1.")).toBeVisible();
-  await expect(s.getByText("Revisa el signo al pasar el 2.").first()).toBeVisible();
-  await expect(s.getByText(/usó un asistente de IA/)).toBeVisible();
-  await s.screenshot({ path: "test-results/shots/student.png", fullPage: true });
-  const pdf = await s.request.get(`${studentUrl}/annotated.pdf`);
-  expect(pdf.status()).toBe(200);
-  expect(pdf.headers()["content-type"]).toBe("application/pdf");
-  // A made-up token shows nothing (in the viewer's language — there is no student to infer one from)
-  await s.goto(studentUrl!.replace(/.{6}$/, "AAAAAA"));
-  await expect(s.getByRole("heading", { name: "Link unavailable" })).toBeVisible();
-  await expect(s.getByText("Fracciones y ecuaciones")).toHaveCount(0);
-  await studentCtx.close();
+  // Another teacher can't download it
+  const other = await page.context().browser()!.newContext();
+  const op = await other.newPage();
+  await signIn(op, `p1-other-${Date.now()}@tinta.test`);
+  expect((await op.request.get(`/api/assignments/${assignmentId}/marked.zip`)).status()).toBe(404);
+  await other.close();
 });

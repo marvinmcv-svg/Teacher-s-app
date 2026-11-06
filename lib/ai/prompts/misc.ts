@@ -25,14 +25,8 @@ export function regenerateSystem(locale: "es" | "en"): string {
   return `You rewrite one margin comment that a teacher will place on a student's handwritten work. Write in ${locale === "es" ? "Spanish" : "English"}, max ~20 words, kind and specific, pointing at the student's actual work. Never mention AI. Never shame. Follow the teacher's instruction. Respond only with the JSON object described by the output schema.`;
 }
 
-export function regenerateUserText(
-  original: string,
-  evidence: string,
-  instruction: string,
-  styleProfile?: string | null,
-) {
+export function regenerateUserText(original: string, evidence: string, instruction: string) {
   return `Original comment: ${original}
 Student work it refers to: ${evidence || "(not available)"}
-Teacher's instruction: ${instruction}
-${styleProfile ? `Teacher style profile: ${styleProfile}` : ""}`;
+Teacher's instruction: ${instruction}`;
 }

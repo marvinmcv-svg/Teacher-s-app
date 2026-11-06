@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   // Cache Components is off for now: almost every teacher screen is per-user,
   // per-request data. See DECISIONS.md (D-004).
   cacheComponents: false,
+  // The handwriting font is read from disk by the marking routes.
+  outputFileTracingIncludes: { "/api/**": ["./lib/fonts/**"] },
   turbopack: {
     rules: {
       "*.css": {

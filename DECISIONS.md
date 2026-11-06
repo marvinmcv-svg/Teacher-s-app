@@ -186,3 +186,13 @@ pin the API version in the adapter.
   - the joint-call A/B
   - KaTeX rendering of LaTeX transcriptions in the review UI
   - the golden set itself (it needs consent)
+
+---
+
+## D. Scope cut (7 Nov 2026)
+
+- **D-039 — The product is: upload papers → AI marks them in red pen → quick review → download a zip.** Requested by the product owner after Phase 1. Everything in the master prompt beyond that was removed or not built: student share links and the public student page, the CSV gradebook, the class QR sheet, approval gating (sample-before-bulk, acknowledge every flagged item), and all of the spec's Phase 2/3 (QR stickers, scanner-PDF split, answer grouping, calibration, blind checks, comment bank, style profile, insights, cost dashboard, admin, billing). The two Phase 2 commits were reverted; migration `20261108000001_simplify.sql` drops the unused tables (`releases`, `comment_bank`, `style_profiles`, `answer_clusters`, `answer_cluster_members`, `exemplars`).
+  - **Review** is a quick check: the teacher can change scores, edit/hide/add comments and approve one paper or all at once. The only hard stop is a `wellbeing_review` flag, which must be acknowledged privately first (safeguarding, §9).
+  - **Marked images** (`lib/marking/render.ts`): ✓ beside right answers, a loose loop + ✗ around mistakes, a ✓ with a slash for partial credit, ? for unreadable, a star for praise; each comment is handwritten in red in the margin beside its answer (under it when the margin is too narrow), with a white halo where it crosses the student's writing; the score is written and circled top-right on page 1 ("8/10 (80)" on the class scale), unless the assignment hides scores. Handwriting is the Caveat font (SIL OFL 1.1, vendored in `lib/fonts`) turned into vector outlines with opentype.js, so rendering never depends on fonts installed on the server. Symbols the font lacks are written out (√ → "raíz", ≤ → "<=").
+  - **File names** (`lib/marking/filenames.ts`): "Last, First.jpg", sorted accent-insensitively by last name; multi-page work is "Last, First - 1.jpg", "- 2.jpg"; unmatched papers go last as "Sin nombre 1.jpg". Names already written "Last, First" are kept. Otherwise: 2 words → last word is the surname; 3+ words → last two words are the surnames (Spanish naming). Duplicates get " (2)".
+  - **The zip** contains approved papers only (the teacher has looked at them) and stores JPEGs uncompressed, so it builds as fast as the pages render.

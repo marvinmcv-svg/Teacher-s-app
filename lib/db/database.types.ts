@@ -89,92 +89,6 @@ export type Database = {
           },
         ];
       };
-      answer_cluster_members: {
-        Row: {
-          answer_id: string;
-          cluster_id: string;
-          created_at: string;
-          updated_at: string;
-        };
-        ComputedFields: never;
-        Insert: {
-          answer_id: string;
-          cluster_id: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          answer_id?: string;
-          cluster_id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "answer_cluster_members_answer_id_fkey";
-            columns: ["answer_id"];
-            isOneToOne: false;
-            referencedRelation: "answers";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "answer_cluster_members_cluster_id_fkey";
-            columns: ["cluster_id"];
-            isOneToOne: false;
-            referencedRelation: "answer_clusters";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      answer_clusters: {
-        Row: {
-          assignment_id: string;
-          created_at: string;
-          id: string;
-          normalised_answer: string;
-          question_id: string;
-          teacher_comment: string | null;
-          teacher_score: number | null;
-          updated_at: string;
-        };
-        ComputedFields: never;
-        Insert: {
-          assignment_id: string;
-          created_at?: string;
-          id?: string;
-          normalised_answer: string;
-          question_id: string;
-          teacher_comment?: string | null;
-          teacher_score?: number | null;
-          updated_at?: string;
-        };
-        Update: {
-          assignment_id?: string;
-          created_at?: string;
-          id?: string;
-          normalised_answer?: string;
-          question_id?: string;
-          teacher_comment?: string | null;
-          teacher_score?: number | null;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "answer_clusters_assignment_id_fkey";
-            columns: ["assignment_id"];
-            isOneToOne: false;
-            referencedRelation: "assignments";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "answer_clusters_question_id_fkey";
-            columns: ["question_id"];
-            isOneToOne: false;
-            referencedRelation: "questions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       answers: {
         Row: {
           created_at: string;
@@ -256,7 +170,6 @@ export type Database = {
           feedback_settings: NonNullable<Json>;
           grade_level: string | null;
           id: string;
-          review_sample_pct: number;
           rubric_id: string | null;
           scale: NonNullable<Json>;
           status: Database["public"]["Enums"]["assignment_status"];
@@ -275,7 +188,6 @@ export type Database = {
           feedback_settings?: NonNullable<Json>;
           grade_level?: string | null;
           id?: string;
-          review_sample_pct?: number;
           rubric_id?: string | null;
           scale: NonNullable<Json>;
           status?: Database["public"]["Enums"]["assignment_status"];
@@ -293,7 +205,6 @@ export type Database = {
           feedback_settings?: NonNullable<Json>;
           grade_level?: string | null;
           id?: string;
-          review_sample_pct?: number;
           rubric_id?: string | null;
           scale?: NonNullable<Json>;
           status?: Database["public"]["Enums"]["assignment_status"];
@@ -455,51 +366,6 @@ export type Database = {
           },
         ];
       };
-      comment_bank: {
-        Row: {
-          created_at: string;
-          id: string;
-          locale: Database["public"]["Enums"]["app_locale"];
-          subject: string | null;
-          tags: string[];
-          teacher_id: string;
-          text: string;
-          updated_at: string;
-          uses: number;
-        };
-        ComputedFields: never;
-        Insert: {
-          created_at?: string;
-          id?: string;
-          locale: Database["public"]["Enums"]["app_locale"];
-          subject?: string | null;
-          tags?: string[];
-          teacher_id: string;
-          text: string;
-          updated_at?: string;
-          uses?: number;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          locale?: Database["public"]["Enums"]["app_locale"];
-          subject?: string | null;
-          tags?: string[];
-          teacher_id?: string;
-          text?: string;
-          updated_at?: string;
-          uses?: number;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "comment_bank_teacher_id_fkey";
-            columns: ["teacher_id"];
-            isOneToOne: false;
-            referencedRelation: "teachers";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       criterion_scores: {
         Row: {
           acknowledged_at: string | null;
@@ -587,52 +453,6 @@ export type Database = {
           },
           {
             foreignKeyName: "criterion_scores_submission_id_fkey";
-            columns: ["submission_id"];
-            isOneToOne: false;
-            referencedRelation: "submissions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      exemplars: {
-        Row: {
-          assignment_id: string;
-          created_at: string;
-          id: string;
-          submission_id: string;
-          teacher_feedback: Json | null;
-          teacher_scores: NonNullable<Json>;
-          updated_at: string;
-        };
-        ComputedFields: never;
-        Insert: {
-          assignment_id: string;
-          created_at?: string;
-          id?: string;
-          submission_id: string;
-          teacher_feedback?: Json | null;
-          teacher_scores: NonNullable<Json>;
-          updated_at?: string;
-        };
-        Update: {
-          assignment_id?: string;
-          created_at?: string;
-          id?: string;
-          submission_id?: string;
-          teacher_feedback?: Json | null;
-          teacher_scores?: NonNullable<Json>;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "exemplars_assignment_id_fkey";
-            columns: ["assignment_id"];
-            isOneToOne: false;
-            referencedRelation: "assignments";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "exemplars_submission_id_fkey";
             columns: ["submission_id"];
             isOneToOne: false;
             referencedRelation: "submissions";
@@ -948,51 +768,6 @@ export type Database = {
           },
         ];
       };
-      releases: {
-        Row: {
-          channel: Database["public"]["Enums"]["release_channel"];
-          created_at: string;
-          expires_at: string | null;
-          id: string;
-          revoked_at: string | null;
-          submission_id: string;
-          token: string;
-          updated_at: string;
-          viewed_at: string | null;
-        };
-        ComputedFields: never;
-        Insert: {
-          channel: Database["public"]["Enums"]["release_channel"];
-          created_at?: string;
-          expires_at?: string | null;
-          id?: string;
-          revoked_at?: string | null;
-          submission_id: string;
-          token: string;
-          updated_at?: string;
-          viewed_at?: string | null;
-        };
-        Update: {
-          channel?: Database["public"]["Enums"]["release_channel"];
-          created_at?: string;
-          expires_at?: string | null;
-          id?: string;
-          revoked_at?: string | null;
-          submission_id?: string;
-          token?: string;
-          updated_at?: string;
-          viewed_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "releases_submission_id_fkey";
-            columns: ["submission_id"];
-            isOneToOne: false;
-            referencedRelation: "submissions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       rubrics: {
         Row: {
           created_at: string;
@@ -1110,45 +885,6 @@ export type Database = {
             columns: ["class_id"];
             isOneToOne: false;
             referencedRelation: "classes";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      style_profiles: {
-        Row: {
-          built_from_edit_count: number;
-          created_at: string;
-          id: string;
-          profile: NonNullable<Json>;
-          teacher_id: string;
-          updated_at: string;
-          version: number;
-        };
-        ComputedFields: never;
-        Insert: {
-          built_from_edit_count?: number;
-          created_at?: string;
-          id?: string;
-          profile: NonNullable<Json>;
-          teacher_id: string;
-          updated_at?: string;
-          version?: number;
-        };
-        Update: {
-          built_from_edit_count?: number;
-          created_at?: string;
-          id?: string;
-          profile?: NonNullable<Json>;
-          teacher_id?: string;
-          updated_at?: string;
-          version?: number;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "style_profiles_teacher_id_fkey";
-            columns: ["teacher_id"];
-            isOneToOne: false;
-            referencedRelation: "teachers";
             referencedColumns: ["id"];
           },
         ];
@@ -1374,7 +1110,6 @@ export type Database = {
       question_source: "typed" | "extracted" | "ai_proposed";
       question_type:
         "numeric" | "short_answer" | "multiple_choice" | "math_steps" | "extended_writing" | "diagram" | "other";
-      release_channel: "link" | "pdf" | "qr" | "print" | "lms";
       submission_status: "uploading" | "queued" | "processing" | "ready" | "needs_attention" | "approved" | "released";
     };
     CompositeTypes: {
@@ -1505,7 +1240,6 @@ export const Constants = {
         "diagram",
         "other",
       ],
-      release_channel: ["link", "pdf", "qr", "print", "lms"],
       submission_status: ["uploading", "queued", "processing", "ready", "needs_attention", "approved", "released"],
     },
   },

@@ -231,8 +231,6 @@
     "scan": "Escanear papeles",
     "review": "Revisar",
     "reviewCount": "Revisar ({count})",
-    "release": "Publicar",
-    "exportCsv": "Exportar notas (CSV)",
     "submissions": "Trabajos",
     "noSubmissions": "Aún no hay trabajos. Escanea la pila de papeles para empezar.",
     "unmatched": "Sin estudiante",
@@ -249,7 +247,7 @@
     "assignments": "Tareas",
     "noAssignments": "Aún no hay tareas en esta clase.",
     "counts": "{ready} listos · {review} por revisar · {processing} en proceso",
-    "aiDisclosure": "Tinta usa IA para proponer notas y comentarios. Nada llega a los estudiantes sin tu aprobación."
+    "aiDisclosure": "Tinta usa IA para corregir las hojas. Revisa cada una antes de descargarla."
   },
   "stages": {
     "uploading": "Subiendo",
@@ -339,10 +337,6 @@
     "approved": "Aprobados",
     "attention": "Requieren atención",
     "empty": "No hay trabajos por revisar todavía.",
-    "approveAllGreen": "Aprobar todos los verdes ({count})",
-    "approveAllGreenLocked": "Para aprobar en bloque, primero abre al menos {required} trabajos verdes al azar (llevas {opened}).",
-    "approveAllGreenDone": "{count, plural, one {Se aprobó # trabajo} other {Se aprobaron # trabajos}}.",
-    "openRandomGreen": "Abrir un verde al azar",
     "student": "Estudiante",
     "unmatched": "Sin estudiante",
     "page": "Página {n}",
@@ -369,9 +363,6 @@
     "rationale": "Por qué",
     "struck": "Tachado: {text}",
     "diagram": "Dibujo: {text}",
-    "acknowledge": "Revisado",
-    "acknowledged": "Revisado ✓",
-    "needsYou": "Revisa esta pregunta antes de aprobar",
     "deductionNote": "Se quitaron puntos — confirma que el error está en el trabajo y no en la lectura.",
     "level": "Nivel",
     "feedback": "Retroalimentación",
@@ -401,9 +392,7 @@
     "approving": "Aprobando…",
     "approvedStamp": "Aprobado",
     "reopen": "Volver a abrir",
-    "approveBlocked": "{count, plural, one {Falta revisar # pregunta marcada} other {Faltan revisar # preguntas marcadas}}.",
     "approveErrors": {
-      "unreviewed": "Revisa las preguntas marcadas antes de aprobar.",
       "wellbeing": "Confirma que viste el aviso de bienestar.",
       "not_ready": "Este trabajo no está listo para aprobar.",
       "failed": "No se pudo aprobar. Inténtalo de nuevo."
@@ -431,56 +420,14 @@
       "unclear": "No se entiende",
       "praise": "Elogio",
       "note": "Nota"
-    }
+    },
+    "downloadPage": "Descargar página {n} corregida"
   },
-  "release": {
-    "title": "Publicar",
-    "intro": "Publica cada trabajo apenas lo apruebes. Cada estudiante recibe su propio enlace privado.",
-    "approvedReady": "{count, plural, one {# trabajo aprobado listo para publicar} other {# trabajos aprobados listos para publicar}}",
-    "releaseAll": "Publicar todos los aprobados",
-    "releaseOne": "Publicar",
-    "releasing": "Publicando…",
-    "expiry": "El enlace vence",
-    "expiryNever": "Nunca",
-    "expiryDays": "{days, plural, one {En # día} other {En # días}}",
-    "released": "Publicados",
-    "notApproved": "Pendientes de aprobación",
-    "noneReleased": "Aún no hay trabajos publicados.",
-    "copyLink": "Copiar enlace",
-    "copied": "Copiado",
-    "whatsapp": "Enviar por WhatsApp",
-    "pdf": "PDF",
-    "png": "Imagen",
-    "qrSheet": "Hoja de códigos QR (PDF)",
-    "revoke": "Revocar enlace",
-    "revoked": "Enlace revocado",
-    "viewed": "Visto",
-    "notViewed": "No visto aún",
-    "whatsappText": "Hola, aquí está tu trabajo corregido de «{title}»: {url}",
-    "pendingCount": "{count, plural, one {# trabajo aún sin aprobar} other {# trabajos aún sin aprobar}}"
-  },
-  "student": {
-    "title": "Tu trabajo",
-    "grade": "Nota",
-    "glows": "Lo que hiciste bien",
-    "grows": "Para mejorar",
-    "how": "Cómo",
-    "nextStep": "Tu siguiente paso",
-    "practice": "Practica",
-    "comments": "Comentarios de tu profe",
-    "page": "Página {n}",
-    "download": "Descargar PDF",
-    "print": "Imprimir",
-    "disclosure": "Tu profesor o profesora usó un asistente de IA para revisar este trabajo y luego revisó y aprobó estos comentarios.",
-    "notFound": "Este enlace no existe, venció o fue revocado. Pídele a tu profe un enlace nuevo.",
-    "notFoundTitle": "Enlace no disponible",
-    "kinds": {
-      "correct": "Correcto",
-      "error": "Error",
-      "partial": "Parcial",
-      "unclear": "No se entiende",
-      "praise": "¡Muy bien!",
-      "note": "Nota"
-    }
+  "download": {
+    "approveAll": "{count, plural, =0 {Nada por aprobar} one {Aprobar # hoja} other {Aprobar las # hojas}}",
+    "approvedAll": "Aprobadas: {approved}. {skipped, plural, =0 {} one {# hoja tiene una nota privada que leer antes.} other {# hojas tienen una nota privada que leer antes.}}",
+    "zip": "{count, plural, one {Descargar # hoja corregida (.zip)} other {Descargar # hojas corregidas (.zip)}}",
+    "zipHint": "Las hojas aprobadas se descargan en un solo .zip, con el nombre de cada estudiante (apellido primero).",
+    "unnamed": "Sin nombre"
   }
 }

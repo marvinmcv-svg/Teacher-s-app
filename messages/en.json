@@ -231,8 +231,6 @@
     "scan": "Scan papers",
     "review": "Review",
     "reviewCount": "Review ({count})",
-    "release": "Release",
-    "exportCsv": "Export grades (CSV)",
     "submissions": "Submissions",
     "noSubmissions": "No work yet. Scan the stack of papers to begin.",
     "unmatched": "No student",
@@ -249,7 +247,7 @@
     "assignments": "Assignments",
     "noAssignments": "No assignments in this class yet.",
     "counts": "{ready} ready · {review} to review · {processing} in progress",
-    "aiDisclosure": "Tinta uses AI to propose grades and comments. Nothing reaches students without your approval."
+    "aiDisclosure": "Tinta uses AI to mark the papers. Check each one before you download it."
   },
   "stages": {
     "uploading": "Uploading",
@@ -339,10 +337,6 @@
     "approved": "Approved",
     "attention": "Need attention",
     "empty": "Nothing to review yet.",
-    "approveAllGreen": "Approve all green ({count})",
-    "approveAllGreenLocked": "To approve in bulk, first open at least {required} green submissions at random (you've opened {opened}).",
-    "approveAllGreenDone": "{count, plural, one {Approved # submission} other {Approved # submissions}}.",
-    "openRandomGreen": "Open a random green one",
     "student": "Student",
     "unmatched": "No student",
     "page": "Page {n}",
@@ -369,9 +363,6 @@
     "rationale": "Why",
     "struck": "Crossed out: {text}",
     "diagram": "Drawing: {text}",
-    "acknowledge": "Checked",
-    "acknowledged": "Checked ✓",
-    "needsYou": "Check this item before approving",
     "deductionNote": "Points were taken off — confirm the error is in the work, not in the reading.",
     "level": "Level",
     "feedback": "Feedback",
@@ -401,9 +392,7 @@
     "approving": "Approving…",
     "approvedStamp": "Approved",
     "reopen": "Reopen",
-    "approveBlocked": "{count, plural, one {# flagged item still to check} other {# flagged items still to check}}.",
     "approveErrors": {
-      "unreviewed": "Check the flagged items before approving.",
       "wellbeing": "Confirm you've seen the wellbeing notice.",
       "not_ready": "This submission isn't ready to approve.",
       "failed": "Couldn't approve. Please try again."
@@ -431,56 +420,14 @@
       "unclear": "Unclear",
       "praise": "Praise",
       "note": "Note"
-    }
+    },
+    "downloadPage": "Download marked page {n}"
   },
-  "release": {
-    "title": "Release",
-    "intro": "Release each submission as soon as you approve it. Every student gets their own private link.",
-    "approvedReady": "{count, plural, one {# approved submission ready to release} other {# approved submissions ready to release}}",
-    "releaseAll": "Release all approved",
-    "releaseOne": "Release",
-    "releasing": "Releasing…",
-    "expiry": "Link expires",
-    "expiryNever": "Never",
-    "expiryDays": "{days, plural, one {In # day} other {In # days}}",
-    "released": "Released",
-    "notApproved": "Not approved yet",
-    "noneReleased": "Nothing released yet.",
-    "copyLink": "Copy link",
-    "copied": "Copied",
-    "whatsapp": "Send via WhatsApp",
-    "pdf": "PDF",
-    "png": "Image",
-    "qrSheet": "QR code sheet (PDF)",
-    "revoke": "Revoke link",
-    "revoked": "Link revoked",
-    "viewed": "Viewed",
-    "notViewed": "Not viewed yet",
-    "whatsappText": "Hi, here is your marked work for “{title}”: {url}",
-    "pendingCount": "{count, plural, one {# submission not approved yet} other {# submissions not approved yet}}"
-  },
-  "student": {
-    "title": "Your work",
-    "grade": "Grade",
-    "glows": "What you did well",
-    "grows": "To improve",
-    "how": "How",
-    "nextStep": "Your next step",
-    "practice": "Practice",
-    "comments": "Your teacher's comments",
-    "page": "Page {n}",
-    "download": "Download PDF",
-    "print": "Print",
-    "disclosure": "Your teacher used an AI assistant to review this work, then reviewed and approved these comments.",
-    "notFound": "This link doesn't exist, has expired or was revoked. Ask your teacher for a new one.",
-    "notFoundTitle": "Link unavailable",
-    "kinds": {
-      "correct": "Correct",
-      "error": "Mistake",
-      "partial": "Partly right",
-      "unclear": "Unclear",
-      "praise": "Great!",
-      "note": "Note"
-    }
+  "download": {
+    "approveAll": "{count, plural, =0 {Nothing left to approve} one {Approve # paper} other {Approve all # papers}}",
+    "approvedAll": "Approved {approved}. {skipped, plural, =0 {} one {# paper has a private note to read first.} other {# papers have a private note to read first.}}",
+    "zip": "{count, plural, one {Download # marked paper (.zip)} other {Download # marked papers (.zip)}}",
+    "zipHint": "Approved papers can be downloaded as one zip, named by student (last name first).",
+    "unnamed": "No name"
   }
 }

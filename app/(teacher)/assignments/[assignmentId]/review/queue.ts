@@ -12,7 +12,7 @@ export async function loadReviewQueue(assignmentId: string) {
       "id, student_id, status, confidence, flags, opened_at, error_code, created_at, students!submissions_student_id_fkey(display_name)",
     )
     .eq("assignment_id", assignmentId)
-    .in("status", ["ready", "approved", "needs_attention", "released"])
+    .in("status", ["ready", "approved", "needs_attention"])
     .order("created_at");
   const list = (data ?? []).map((s) => ({
     ...s,

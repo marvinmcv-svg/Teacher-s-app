@@ -5,11 +5,13 @@ import { Wordmark } from "@/components/brand";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { aiProviderStatus } from "@/lib/ai/status";
 import { isSupabaseConfigured } from "@/lib/env";
 
 export default async function SetupPage() {
   const t = await getTranslations("setup");
   const ok = isSupabaseConfigured();
+  const ai = aiProviderStatus();
   return (
     <main className="relative z-10 mx-auto flex min-h-dvh max-w-lg flex-col gap-6 px-4 py-10">
       <div className="flex items-center justify-between">
@@ -36,6 +38,17 @@ export default async function SetupPage() {
               <p className="text-ink-muted">{t("steps")}</p>
             </>
           )}
+          <p
+            className={`flex items-center gap-2 text-sm ${ai.configured ? "text-pen-green" : "text-pen-amber"}`}
+            data-testid="ai-status"
+          >
+            {ai.configured ? (
+              <CheckCircle2 aria-hidden className="size-4" />
+            ) : (
+              <AlertTriangle aria-hidden className="size-4" />
+            )}
+            {ai.configured ? t("aiOk", { provider: ai.provider }) : t("aiMissing", { envVar: ai.envVar })}
+          </p>
         </CardContent>
       </Card>
     </main>

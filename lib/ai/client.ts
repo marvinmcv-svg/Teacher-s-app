@@ -4,6 +4,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { costUsd, roleConfig, type AiRole } from "./config";
 import { AiOutputError, AiRefusalError, MissingConfigError } from "./errors";
+import { callNvidia, nvidiaSelected } from "./nvidia";
 
 let client: Anthropic | null = null;
 
@@ -49,6 +50,7 @@ export type StructuredCall<T> = {
 
 /** The single entry point for model calls. JSON outputs only — no forced tool_choice (400 on 5.5 models). */
 export async function callStructured<T>(call: StructuredCall<T>): Promise<T> {
+  if (nvidiaSelected()) return callNvidia(call);
   const anthropic = getAnthropic();
   const { model, effort, maxTokens } = roleConfig(call.role);
 

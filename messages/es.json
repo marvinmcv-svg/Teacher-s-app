@@ -20,7 +20,9 @@
     "body": "La aplicación no puede conectarse a la base de datos porque faltan variables de entorno.",
     "steps": "Copia .env.example a .env.local, completa NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, y reinicia el servidor. Ver README → Configuración.",
     "ok": "Todo está configurado.",
-    "goToLogin": "Ir a iniciar sesión"
+    "goToLogin": "Ir a iniciar sesión",
+    "aiOk": "IA: clave de {provider} detectada.",
+    "aiMissing": "IA: falta {envVar}; la corrección no funcionará hasta que se agregue."
   },
   "login": {
     "title": "Inicia sesión",

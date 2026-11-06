@@ -20,7 +20,9 @@
     "body": "The app can't reach its database because some environment variables are missing.",
     "steps": "Copy .env.example to .env.local, fill in NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, then restart the server. See README → Setup.",
     "ok": "Everything is configured.",
-    "goToLogin": "Go to sign in"
+    "goToLogin": "Go to sign in",
+    "aiOk": "AI: {provider} key detected.",
+    "aiMissing": "AI: {envVar} is not set, so grading won’t work until it is added."
   },
   "login": {
     "title": "Sign in",

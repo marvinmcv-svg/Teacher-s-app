@@ -255,7 +255,6 @@ export type Database = {
           feedback_locale: Database["public"]["Enums"]["app_locale"];
           feedback_settings: NonNullable<Json>;
           grade_level: string | null;
-          grading_mode: string;
           id: string;
           review_sample_pct: number;
           rubric_id: string | null;
@@ -275,7 +274,6 @@ export type Database = {
           feedback_locale?: Database["public"]["Enums"]["app_locale"];
           feedback_settings?: NonNullable<Json>;
           grade_level?: string | null;
-          grading_mode?: string;
           id?: string;
           review_sample_pct?: number;
           rubric_id?: string | null;
@@ -294,7 +292,6 @@ export type Database = {
           feedback_locale?: Database["public"]["Enums"]["app_locale"];
           feedback_settings?: NonNullable<Json>;
           grade_level?: string | null;
-          grading_mode?: string;
           id?: string;
           review_sample_pct?: number;
           rubric_id?: string | null;
@@ -357,68 +354,6 @@ export type Database = {
           {
             foreignKeyName: "audit_log_actor_id_fkey";
             columns: ["actor_id"];
-            isOneToOne: false;
-            referencedRelation: "teachers";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      blind_checks: {
-        Row: {
-          assignment_id: string;
-          created_at: string;
-          exact_rate: number;
-          id: string;
-          items: NonNullable<Json>;
-          n_items: number;
-          submission_id: string;
-          teacher_id: string;
-          updated_at: string;
-          within_rate: number;
-        };
-        ComputedFields: never;
-        Insert: {
-          assignment_id: string;
-          created_at?: string;
-          exact_rate: number;
-          id?: string;
-          items: NonNullable<Json>;
-          n_items: number;
-          submission_id: string;
-          teacher_id: string;
-          updated_at?: string;
-          within_rate: number;
-        };
-        Update: {
-          assignment_id?: string;
-          created_at?: string;
-          exact_rate?: number;
-          id?: string;
-          items?: NonNullable<Json>;
-          n_items?: number;
-          submission_id?: string;
-          teacher_id?: string;
-          updated_at?: string;
-          within_rate?: number;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "blind_checks_assignment_id_fkey";
-            columns: ["assignment_id"];
-            isOneToOne: false;
-            referencedRelation: "assignments";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "blind_checks_submission_id_fkey";
-            columns: ["submission_id"];
-            isOneToOne: true;
-            referencedRelation: "submissions";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "blind_checks_teacher_id_fkey";
-            columns: ["teacher_id"];
             isOneToOne: false;
             referencedRelation: "teachers";
             referencedColumns: ["id"];
@@ -524,14 +459,11 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
-          last_used_at: string | null;
           locale: Database["public"]["Enums"]["app_locale"];
-          source: string;
           subject: string | null;
           tags: string[];
           teacher_id: string;
           text: string;
-          text_key: string | null;
           updated_at: string;
           uses: number;
         };
@@ -539,28 +471,22 @@ export type Database = {
         Insert: {
           created_at?: string;
           id?: string;
-          last_used_at?: string | null;
           locale: Database["public"]["Enums"]["app_locale"];
-          source?: string;
           subject?: string | null;
           tags?: string[];
           teacher_id: string;
           text: string;
-          text_key?: never;
           updated_at?: string;
           uses?: number;
         };
         Update: {
           created_at?: string;
           id?: string;
-          last_used_at?: string | null;
           locale?: Database["public"]["Enums"]["app_locale"];
-          source?: string;
           subject?: string | null;
           tags?: string[];
           teacher_id?: string;
           text?: string;
-          text_key?: never;
           updated_at?: string;
           uses?: number;
         };
@@ -768,37 +694,6 @@ export type Database = {
           },
         ];
       };
-      grading_batches: {
-        Row: {
-          created_at: string;
-          id: string;
-          phase: string;
-          provider_batch_id: string | null;
-          status: string;
-          submission_ids: string[];
-          updated_at: string;
-        };
-        ComputedFields: never;
-        Insert: {
-          created_at?: string;
-          id?: string;
-          phase: string;
-          provider_batch_id?: string | null;
-          status?: string;
-          submission_ids: string[];
-          updated_at?: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          phase?: string;
-          provider_batch_id?: string | null;
-          status?: string;
-          submission_ids?: string[];
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
       grading_runs: {
         Row: {
           assignment_id: string | null;
@@ -871,45 +766,6 @@ export type Database = {
             columns: ["submission_id"];
             isOneToOne: false;
             referencedRelation: "submissions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      mini_lessons: {
-        Row: {
-          assignment_id: string;
-          created_at: string;
-          id: string;
-          lesson: NonNullable<Json>;
-          locale: Database["public"]["Enums"]["app_locale"];
-          misconception_tag: string;
-          updated_at: string;
-        };
-        ComputedFields: never;
-        Insert: {
-          assignment_id: string;
-          created_at?: string;
-          id?: string;
-          lesson: NonNullable<Json>;
-          locale: Database["public"]["Enums"]["app_locale"];
-          misconception_tag: string;
-          updated_at?: string;
-        };
-        Update: {
-          assignment_id?: string;
-          created_at?: string;
-          id?: string;
-          lesson?: NonNullable<Json>;
-          locale?: Database["public"]["Enums"]["app_locale"];
-          misconception_tag?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "mini_lessons_assignment_id_fkey";
-            columns: ["assignment_id"];
-            isOneToOne: false;
-            referencedRelation: "assignments";
             referencedColumns: ["id"];
           },
         ];
@@ -1022,67 +878,6 @@ export type Database = {
             columns: ["submission_id"];
             isOneToOne: false;
             referencedRelation: "submissions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      pdf_imports: {
-        Row: {
-          assignment_id: string;
-          created_at: string;
-          error_code: string | null;
-          id: string;
-          matched_by_qr: number | null;
-          page_count: number | null;
-          pages_per_student: number;
-          status: string;
-          storage_path: string;
-          submissions_created: number | null;
-          teacher_id: string;
-          updated_at: string;
-        };
-        ComputedFields: never;
-        Insert: {
-          assignment_id: string;
-          created_at?: string;
-          error_code?: string | null;
-          id?: string;
-          matched_by_qr?: number | null;
-          page_count?: number | null;
-          pages_per_student?: number;
-          status?: string;
-          storage_path: string;
-          submissions_created?: number | null;
-          teacher_id: string;
-          updated_at?: string;
-        };
-        Update: {
-          assignment_id?: string;
-          created_at?: string;
-          error_code?: string | null;
-          id?: string;
-          matched_by_qr?: number | null;
-          page_count?: number | null;
-          pages_per_student?: number;
-          status?: string;
-          storage_path?: string;
-          submissions_created?: number | null;
-          teacher_id?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "pdf_imports_assignment_id_fkey";
-            columns: ["assignment_id"];
-            isOneToOne: false;
-            referencedRelation: "assignments";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "pdf_imports_teacher_id_fkey";
-            columns: ["teacher_id"];
-            isOneToOne: false;
-            referencedRelation: "teachers";
             referencedColumns: ["id"];
           },
         ];
@@ -1363,7 +1158,6 @@ export type Database = {
           approved_at: string | null;
           approved_by: string | null;
           assignment_id: string;
-          blind_check: boolean;
           client_ref: string | null;
           confidence: Database["public"]["Enums"]["confidence_band"] | null;
           created_at: string;
@@ -1375,7 +1169,6 @@ export type Database = {
           name_match_confidence: number | null;
           opened_at: string | null;
           processing_stage: string | null;
-          review_seconds: number | null;
           status: Database["public"]["Enums"]["submission_status"];
           student_id: string | null;
           suggested_student_id: string | null;
@@ -1388,7 +1181,6 @@ export type Database = {
           approved_at?: string | null;
           approved_by?: string | null;
           assignment_id: string;
-          blind_check?: boolean;
           client_ref?: string | null;
           confidence?: Database["public"]["Enums"]["confidence_band"] | null;
           created_at?: string;
@@ -1400,7 +1192,6 @@ export type Database = {
           name_match_confidence?: number | null;
           opened_at?: string | null;
           processing_stage?: string | null;
-          review_seconds?: number | null;
           status?: Database["public"]["Enums"]["submission_status"];
           student_id?: string | null;
           suggested_student_id?: string | null;
@@ -1412,7 +1203,6 @@ export type Database = {
           approved_at?: string | null;
           approved_by?: string | null;
           assignment_id?: string;
-          blind_check?: boolean;
           client_ref?: string | null;
           confidence?: Database["public"]["Enums"]["confidence_band"] | null;
           created_at?: string;
@@ -1424,7 +1214,6 @@ export type Database = {
           name_match_confidence?: number | null;
           opened_at?: string | null;
           processing_stage?: string | null;
-          review_seconds?: number | null;
           status?: Database["public"]["Enums"]["submission_status"];
           student_id?: string | null;
           suggested_student_id?: string | null;
@@ -1517,7 +1306,6 @@ export type Database = {
       };
       teachers: {
         Row: {
-          blind_check_pct: number;
           created_at: string;
           display_name: string | null;
           id: string;
@@ -1530,7 +1318,6 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
-          blind_check_pct?: number;
           created_at?: string;
           display_name?: string | null;
           id: string;
@@ -1542,7 +1329,6 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          blind_check_pct?: number;
           created_at?: string;
           display_name?: string | null;
           id?: string;
@@ -1583,14 +1369,7 @@ export type Database = {
       class_teacher_role: "owner" | "co_teacher";
       confidence_band: "high" | "medium" | "low";
       grading_run_kind:
-        | "name_read"
-        | "key_extract"
-        | "transcribe"
-        | "grade"
-        | "verify"
-        | "regenerate"
-        | "style_distill"
-        | "mini_lesson";
+        "name_read" | "key_extract" | "transcribe" | "grade" | "verify" | "regenerate" | "style_distill";
       match_method: "qr" | "name_ocr" | "manual";
       question_source: "typed" | "extracted" | "ai_proposed";
       question_type:
@@ -1714,16 +1493,7 @@ export const Constants = {
       assignment_status: ["draft", "collecting", "grading", "reviewing", "released"],
       class_teacher_role: ["owner", "co_teacher"],
       confidence_band: ["high", "medium", "low"],
-      grading_run_kind: [
-        "name_read",
-        "key_extract",
-        "transcribe",
-        "grade",
-        "verify",
-        "regenerate",
-        "style_distill",
-        "mini_lesson",
-      ],
+      grading_run_kind: ["name_read", "key_extract", "transcribe", "grade", "verify", "regenerate", "style_distill"],
       match_method: ["qr", "name_ocr", "manual"],
       question_source: ["typed", "extracted", "ai_proposed"],
       question_type: [

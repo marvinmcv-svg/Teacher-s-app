@@ -22,7 +22,7 @@ export default async function ScanPage({ params }: PageProps<"/assignments/[assi
   const [{ data: roster }, { data: subs }] = await Promise.all([
     supabase
       .from("students")
-      .select("id, display_name, qr_code_token")
+      .select("id, display_name")
       .eq("class_id", a.class_id)
       .eq("active", true)
       .order("display_name"),

@@ -249,22 +249,7 @@
     "assignments": "Assignments",
     "noAssignments": "No assignments in this class yet.",
     "counts": "{ready} ready · {review} to review · {processing} in progress",
-    "aiDisclosure": "Tinta uses AI to propose grades and comments. Nothing reaches students without your approval.",
-    "imports": "Scanner PDFs",
-    "importStatus": {
-      "uploaded": "Waiting",
-      "splitting": "Splitting…",
-      "done": "{submissions} students · {qr} matched by QR · {pages} pages",
-      "failed": "Couldn't split"
-    },
-    "importErrors": {
-      "too_large": "The PDF is over 50 MB.",
-      "too_many_pages": "The PDF has more than 200 pages. Split it in two.",
-      "unreadable": "The PDF couldn't be read. Try exporting it again from the scanner.",
-      "missing_file": "The upload didn't finish. Upload the PDF again.",
-      "empty": "The PDF has no pages.",
-      "pipeline_error": "Something went wrong while splitting. Upload the PDF again."
-    }
+    "aiDisclosure": "Tinta uses AI to propose grades and comments. Nothing reaches students without your approval."
   },
   "stages": {
     "uploading": "Uploading",
@@ -344,15 +329,7 @@
     "offlineNote": "Offline: photos stay saved on this device and upload when you reopen Tinta with internet.",
     "batchSummary": "{groups, plural, one {# submission} other {# submissions}} · {pages, plural, one {# page} other {# pages}}",
     "backToAssignment": "Back to assignment",
-    "retryNow": "Retry now",
-    "qrMatched": "QR: {name}",
-    "pdfTitle": "Upload a scanner PDF",
-    "pdfHint": "Scan the whole stack into one PDF. Tinta splits it into students using the QR cover sheets or name stickers; without codes it uses the number of pages below. Up to 200 pages, 50 MB.",
-    "pagesPerStudentNoQr": "Pages per student (when there are no QR codes)",
-    "pdfNeedsOnline": "PDF upload needs a connection. Photos still work offline.",
-    "pdfUploading": "Uploading the PDF…",
-    "pdfStarted": "Uploaded. Tinta is splitting it now; students appear on the assignment page as they're found.",
-    "pdfError": "That PDF couldn't be uploaded. Check it's under 50 MB and try again."
+    "retryNow": "Retry now"
   },
   "review": {
     "queueTitle": "Review",
@@ -505,14 +482,5 @@
       "praise": "Great!",
       "note": "Note"
     }
-  },
-  "qr": {
-    "coverTitle": "Cover sheet — put this on top of the student's pages",
-    "coverInstructions": "Place this sheet on top of this student's pages before you scan or photograph them. Tinta reads the code, starts a new student and does not grade this sheet. The code contains no name.",
-    "stickerHint": "Stick on the worksheet · Tinta",
-    "title": "QR name codes",
-    "hint": "Print name stickers for worksheets, or one cover sheet per student. Papers with a code are matched automatically.",
-    "stickers": "Name stickers (PDF)",
-    "covers": "Cover sheets (PDF)"
   }
 }

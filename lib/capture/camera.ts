@@ -1,6 +1,5 @@
 "use client";
 import { assess, measure, rgbaToGray, type QualityIssue } from "@/lib/image/quality";
-import { decodeRgba } from "@/lib/qr/payload";
 
 export const MAX_CAPTURE_EDGE = 3000;
 
@@ -46,17 +45,4 @@ export async function toJpeg(source: CanvasImageSource, w: number, h: number, qu
 export async function decodeFile(file: File) {
   const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
   return bmp;
-}
-
-/** Read a Tinta QR (cover sheet or name sticker) from a frame/image, at most 1600 px on the long edge. */
-export function readQr(source: CanvasImageSource, w: number, h: number) {
-  const scale = Math.min(1, 1600 / Math.max(w, h));
-  const cw = Math.max(1, Math.round(w * scale));
-  const ch = Math.max(1, Math.round(h * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = cw;
-  canvas.height = ch;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
-  ctx.drawImage(source, 0, 0, cw, ch);
-  return decodeRgba(ctx.getImageData(0, 0, cw, ch).data, cw, ch);
 }

@@ -2,7 +2,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { inngest } from "@/inngest/client";
 import { enqueueGrading } from "@/lib/pipeline/enqueue";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -196,51 +195,5 @@ export async function regradeSubmission(submissionId: string) {
     .eq("id", sub.id);
   await queueOrFlag(supabase, sub.id, user.id);
   revalidatePath(`/assignments/${sub.assignment_id}`);
-  return { ok: true };
-}
-
-// ---------------------------------------------------------------------------
-// Scanner PDFs (§3.2): the browser uploads the PDF to the teacher's prefix,
-// then the pipeline rasterises and splits it (QR cover sheets/stickers, else
-// a fixed number of pages per student).
-// ---------------------------------------------------------------------------
-const PdfPrepareSchema = z.object({
-  assignmentId: z.uuid(),
-  pagesPerStudent: z.number().int().min(1).max(20),
-});
-
-export async function preparePdfImport(input: z.input<typeof PdfPrepareSchema>) {
-  const p = PdfPrepareSchema.safeParse(input);
-  if (!p.success) return { ok: false as const };
-  const { supabase, user } = await requireTeacher();
-  const id = crypto.randomUUID();
-  const path = `${user.id}/${p.data.assignmentId}/imports/${id}.pdf`;
-  const { error } = await supabase.from("pdf_imports").insert({
-    id,
-    assignment_id: p.data.assignmentId,
-    teacher_id: user.id,
-    storage_path: path,
-    pages_per_student: p.data.pagesPerStudent,
-  });
-  if (error) return { ok: false as const };
-  return { ok: true as const, importId: id, path };
-}
-
-export async function startPdfImport(importId: string) {
-  if (!z.uuid().safeParse(importId).success) return { ok: false };
-  const { supabase, user } = await requireTeacher();
-  const { data: imp } = await supabase
-    .from("pdf_imports")
-    .select("id, assignment_id, status")
-    .eq("id", importId)
-    .maybeSingle();
-  if (!imp || imp.status !== "uploaded") return { ok: false };
-  try {
-    await inngest.send({ name: "tinta/pdf.import.requested", data: { importId: imp.id, teacherId: user.id } });
-  } catch (err) {
-    console.error("pdf_import.enqueue_failed", { name: (err as Error).name });
-    return { ok: false };
-  }
-  revalidatePath(`/assignments/${imp.assignment_id}`);
   return { ok: true };
 }

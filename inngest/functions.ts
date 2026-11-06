@@ -3,7 +3,6 @@ import { callStructured } from "@/lib/ai/client";
 import { perTeacherConcurrency } from "@/lib/ai/config";
 import { getOcrProvider } from "@/lib/ocr/google-vision";
 import { gradeSubmission, markFailure } from "@/lib/pipeline/grade-submission";
-import { splitPdfImport } from "@/lib/pipeline/pdf-import";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { inngest } from "./client";
 
@@ -59,36 +58,4 @@ export const gradeSubmissionFn = inngest.createFunction(
   },
 );
 
-/** Scanner PDF → rasterise → split by QR / page count → one grading run per student (§3.2). */
-export const pdfImportFn = inngest.createFunction(
-  {
-    id: "pdf-import-split",
-    triggers: [{ event: "tinta/pdf.import.requested" }],
-    concurrency: [{ key: "event.data.teacherId", limit: 1 }],
-    retries: 2,
-    onFailure: async ({ event, error }) => {
-      const data = (event.data as { event?: { data?: { importId?: string } } }).event?.data;
-      if (!data?.importId) return;
-      await getAdminClient()
-        .from("pdf_imports")
-        .update({ status: "failed", error_code: "pipeline_error" })
-        .eq("id", data.importId);
-      console.error("pdf_import.failed", { importId: data.importId, error: error.name });
-    },
-  },
-  async ({ event, step }) => {
-    const { importId, teacherId } = event.data as { importId: string; teacherId: string };
-    const ids = await step.run("rasterise-and-split", () => splitPdfImport(getAdminClient(), importId));
-    if (ids.length)
-      await step.sendEvent(
-        "queue-grading",
-        ids.map((submissionId) => ({
-          name: "tinta/submission.grade.requested",
-          data: { submissionId, teacherId } satisfies GradeRequested,
-        })),
-      );
-    return { submissions: ids.length };
-  },
-);
-
-export const functions = [ping, gradeSubmissionFn, pdfImportFn];
+export const functions = [ping, gradeSubmissionFn];

@@ -1,4 +1,4 @@
-import { ArrowLeft, BarChart3, Camera, ClipboardCheck, Download, Gauge, Layers, Send } from "lucide-react";
+import { ArrowLeft, Camera, ClipboardCheck, Download, Send } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations } from "next-intl/server";
@@ -9,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import { ScaleSchema, describeScale, toScale } from "@/lib/grading/scales";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AutoRefresh } from "./auto-refresh";
-import { CalibrationCard } from "./calibration-card";
 import { SubmissionStudent } from "./submission-student";
 import { RegradeButton } from "./regrade-button";
 
@@ -25,7 +24,7 @@ export default async function AssignmentPage({ params }: PageProps<"/assignments
     .eq("id", assignmentId)
     .maybeSingle();
   if (!a) notFound();
-  const [{ data: subs }, { data: roster }, { data: imports }, { count: exemplarCount }] = await Promise.all([
+  const [{ data: subs }, { data: roster }, { data: imports }] = await Promise.all([
     supabase
       .from("submissions")
       .select(
@@ -45,7 +44,6 @@ export default async function AssignmentPage({ params }: PageProps<"/assignments
       .eq("assignment_id", assignmentId)
       .order("created_at", { ascending: false })
       .limit(5),
-    supabase.from("exemplars").select("id", { count: "exact", head: true }).eq("assignment_id", assignmentId),
   ]);
   const scale = ScaleSchema.safeParse(a.scale);
   const nameOf = new Map((roster ?? []).map((s) => [s.id, s.display_name]));
@@ -105,27 +103,7 @@ export default async function AssignmentPage({ params }: PageProps<"/assignments
         </div>
       </div>
 
-      <nav aria-label={t("hub.tools")} className="flex flex-wrap gap-2">
-        <Button asChild variant="ghost">
-          <Link href={`/assignments/${a.id}/clusters`}>
-            <Layers aria-hidden /> {t("hub.gradeByAnswer")}
-          </Link>
-        </Button>
-        <Button asChild variant="ghost">
-          <Link href={`/assignments/${a.id}/insights`}>
-            <BarChart3 aria-hidden /> {t("hub.insights")}
-          </Link>
-        </Button>
-        <Button asChild variant="ghost">
-          <Link href={`/assignments/${a.id}/costs`}>
-            <Gauge aria-hidden /> {t("hub.costs")}
-          </Link>
-        </Button>
-      </nav>
-
       <p className="text-sm text-ink-muted">{t("hub.aiDisclosure")}</p>
-
-      {list.length > 0 && <CalibrationCard assignmentId={a.id} count={exemplarCount ?? 0} />}
 
       {!!imports?.length && (
         <section aria-labelledby="imports-heading" className="flex flex-col gap-2">

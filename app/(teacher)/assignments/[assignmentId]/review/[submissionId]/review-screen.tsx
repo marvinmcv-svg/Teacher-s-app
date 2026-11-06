@@ -1,24 +1,12 @@
 "use client";
-import {
-  AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
-  EyeOff,
-  Eye,
-  GraduationCap,
-  RotateCcw,
-  Sparkles,
-  Stamp,
-} from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Eye, EyeOff, RotateCcw, Sparkles, Stamp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ConfidenceChip, StatusChip } from "@/components/chips";
-import { CommentBankPicker } from "@/components/comment-bank-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldError, Input, Label, Select, Textarea } from "@/components/ui/input";
-import { setExemplar } from "@/lib/actions/calibration";
 import { setSubmissionStudent } from "@/lib/actions/capture";
 import {
   acknowledgeItem,
@@ -33,7 +21,6 @@ import {
   updateFeedback,
 } from "@/lib/actions/review";
 import { toScale, type Scale } from "@/lib/grading/scales";
-import { BlindCheck } from "./blind-check";
 import { cn } from "@/lib/utils";
 import {
   PIN_STYLE,
@@ -75,10 +62,6 @@ export type ReviewData = {
     suggestedStudentId: string | null;
     errorCode: string | null;
     opened: boolean;
-    blind: boolean;
-    blindResult: { n: number; exact: number; within: number } | null;
-    exemplar: boolean;
-    exemplarCount: number;
   };
   roster: { id: string; display_name: string }[];
   pages: PageImg[];
@@ -100,29 +83,6 @@ const isTyping = (el: EventTarget | null) =>
   (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 
 export function ReviewScreen({ data }: { data: ReviewData }) {
-  return data.submission.blind ? <BlindCheck data={data} /> : <FullReview data={data} />;
-}
-
-/** Active review time (§11 Phase 2: median review time per green submission). Counts only while visible. */
-function useActiveSeconds() {
-  const acc = useRef(0);
-  const since = useRef<number | null>(null);
-  useEffect(() => {
-    const mark = () => {
-      if (document.visibilityState === "visible") since.current ??= Date.now();
-      else if (since.current !== null) {
-        acc.current += Date.now() - since.current;
-        since.current = null;
-      }
-    };
-    mark();
-    document.addEventListener("visibilitychange", mark);
-    return () => document.removeEventListener("visibilitychange", mark);
-  }, []);
-  return () => Math.round((acc.current + (since.current === null ? 0 : Date.now() - since.current)) / 1000);
-}
-
-function FullReview({ data }: { data: ReviewData }) {
   const t = useTranslations("review");
   const tc = useTranslations("confidence");
   const router = useRouter();
@@ -140,14 +100,6 @@ function FullReview({ data }: { data: ReviewData }) {
   const [pending, start] = useTransition();
   const feedbackRef = useRef<HTMLTextAreaElement>(null);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
-  const activeSeconds = useActiveSeconds();
-  const openedPins = useRef(new Set<string>());
-  useEffect(() => {
-    if (selectedPin) openedPins.current.add(selectedPin);
-  }, [selectedPin]);
-  const [exemplar, setExemplarState] = useState(sub.exemplar);
-  const [exemplarCount, setExemplarCount] = useState(sub.exemplarCount);
-  const [exemplarError, setExemplarError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sub.opened) void markOpened(sub.id); // counts toward the green sample (§3.4)
@@ -183,10 +135,7 @@ function FullReview({ data }: { data: ReviewData }) {
   const approve = useCallback(() => {
     setApproveError(null);
     start(async () => {
-      const res = await approveSubmission(sub.id, {
-        reviewSeconds: activeSeconds(),
-        openedPins: [...openedPins.current],
-      });
+      const res = await approveSubmission(sub.id);
       if (!res.ok) return setApproveError(t(`approveErrors.${res.error}`));
       setStamped(true);
       setTimeout(
@@ -199,7 +148,7 @@ function FullReview({ data }: { data: ReviewData }) {
         700,
       );
     });
-  }, [sub.id, t, router, data.nav.next, assignment.id, activeSeconds]);
+  }, [sub.id, t, router, data.nav.next, assignment.id]);
 
   // Keyboard shortcuts (§3.4)
   useEffect(() => {
@@ -297,16 +246,6 @@ function FullReview({ data }: { data: ReviewData }) {
         </Card>
       )}
 
-      {sub.blindResult && (
-        <Card role="status" className="p-4 text-sm">
-          {t("blindResult", {
-            within: Math.round(sub.blindResult.within * 100),
-            exact: Math.round(sub.blindResult.exact * 100),
-            n: sub.blindResult.n,
-          })}
-        </Card>
-      )}
-
       <div className="grid gap-4 md:grid-cols-[55fr_45fr] lg:grid-cols-[60fr_40fr]">
         {/* left: the page is the hero */}
         <div className="flex flex-col gap-4">
@@ -325,7 +264,6 @@ function FullReview({ data }: { data: ReviewData }) {
               selectedPin={selectedPin}
               onSelectPin={setSelectedPin}
               readOnly={readOnly}
-              renderBank={(onPick) => <CommentBankPicker submissionId={sub.id} onPick={onPick} />}
               onAddNote={async (region, text, kind) => {
                 const res = await addAnnotation(sub.id, p.id, region, text, kind);
                 if (res.ok)
@@ -386,7 +324,6 @@ function FullReview({ data }: { data: ReviewData }) {
           )}
 
           <CommentsList
-            submissionId={sub.id}
             pins={pins}
             setPins={setPins}
             selected={selectedPin}
@@ -433,29 +370,6 @@ function FullReview({ data }: { data: ReviewData }) {
               </div>
             )}
             {sub.status === "released" && <StatusChip label={t("approvedStamp")} tone="good" />}
-            {(sub.status === "approved" || sub.status === "released") && (
-              <div className="flex flex-col gap-1 border-t border-rule pt-2">
-                <Button
-                  variant={exemplar ? "outline" : "ghost"}
-                  aria-pressed={exemplar}
-                  disabled={pending || (!exemplar && exemplarCount >= 3)}
-                  onClick={() =>
-                    start(async () => {
-                      setExemplarError(null);
-                      const res = await setExemplar(sub.id, !exemplar);
-                      if (!res.ok) return setExemplarError(t(`exemplarErrors.${res.error}`));
-                      setExemplarState(!exemplar);
-                      setExemplarCount(res.count);
-                    })
-                  }
-                  className="self-start"
-                >
-                  <GraduationCap aria-hidden /> {exemplar ? t("exemplarOn") : t("exemplarOff")} ({exemplarCount}/3)
-                </Button>
-                <p className="text-xs text-ink-muted">{t("exemplarHint")}</p>
-                {exemplarError && <FieldError>{exemplarError}</FieldError>}
-              </div>
-            )}
             <p className="hidden text-xs text-ink-muted md:block">{t("shortcuts")}</p>
           </Card>
         </div>
@@ -749,14 +663,12 @@ function FeedbackEditor({
 }
 
 function CommentsList({
-  submissionId,
   pins,
   setPins,
   selected,
   onSelect,
   readOnly,
 }: {
-  submissionId: string;
   pins: ReviewData["pins"];
   setPins: React.Dispatch<React.SetStateAction<ReviewData["pins"]>>;
   selected: string | null;
@@ -852,7 +764,6 @@ function CommentsList({
                       <Button variant="ghost" onClick={() => setEditing(null)}>
                         {t("cancel")}
                       </Button>
-                      <CommentBankPicker submissionId={submissionId} onPick={setDraft} />
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Input

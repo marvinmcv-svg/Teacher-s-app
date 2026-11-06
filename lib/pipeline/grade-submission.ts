@@ -2,7 +2,6 @@ import "server-only";
 import type { CallRecord, ImageInput, StructuredCall } from "@/lib/ai/client";
 import { AiOutputError, AiRefusalError, MissingConfigError } from "@/lib/ai/errors";
 import { renderAssignmentContext, type OcrLineForPrompt } from "@/lib/ai/prompts/context";
-import { renderExemplars, type ExemplarForPrompt } from "@/lib/ai/prompts/exemplars";
 import { GRADE_PROMPT_VERSION, gradeSystem, gradeUserText } from "@/lib/ai/prompts/grade";
 import { NAME_READ_PROMPT_VERSION, NAME_READ_SYSTEM } from "@/lib/ai/prompts/misc";
 import { TRANSCRIBE_PROMPT_VERSION, TRANSCRIBE_SYSTEM, transcribeUserText } from "@/lib/ai/prompts/transcribe";
@@ -18,7 +17,6 @@ import {
 } from "@/lib/ai/schemas";
 import { formatIssues, itemKeyOf, validateGrade, validateTranscription, validateVerification } from "@/lib/ai/validate";
 import { bandThresholds } from "@/lib/ai/config";
-import { pickForBlindCheck } from "@/lib/grading/agreement";
 import { itemConfidence, submissionBand, toBand, type Band } from "@/lib/grading/confidence";
 import { findNameLines, matchRoster } from "@/lib/grading/names";
 import { decodePageQr } from "@/lib/qr/decode-image";
@@ -30,9 +28,7 @@ import { lineKey } from "@/lib/ocr/vision-lines";
 import { unionBox, type BBox, type OcrProvider } from "@/lib/ocr/types";
 import { BUCKETS, type AdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/db/types";
-import { renderStyleProfile } from "@/lib/style/profile";
 import { buildAssignmentContext, levelStep } from "./context";
-import { loadStyleProfile } from "./style-profile";
 
 /**
  * submission.grade (§8.1). Each exported step is idempotent and safe to retry
@@ -147,56 +143,15 @@ export async function loadSubmission(db: AdminClient, submissionId: string) {
       .eq("active", true),
     "load roster",
   );
-  const teacher = await must(
-    db.from("teachers").select("id, blind_check_pct").eq("id", cls.teacher_id).maybeSingle(),
-    "load teacher",
-  );
-  const loaded = buildAssignmentContext(assignment, questions);
   return {
     submission,
     assignment,
     cls,
-    teacher,
     questions,
     pages,
     roster,
-    loaded,
-    exemplars: await loadExemplars(db, assignment.id, submissionId, loaded.questionIdByKey),
-    styleProfile: await loadStyleProfile(db, cls.teacher_id),
+    loaded: buildAssignmentContext(assignment, questions),
   };
-}
-
-/** Up to 3 teacher-graded exemplars for this assignment (never the submission being graded). */
-async function loadExemplars(
-  db: AdminClient,
-  assignmentId: string,
-  submissionId: string,
-  questionIdByKey: Map<string, string>,
-): Promise<ExemplarForPrompt[]> {
-  const { data: rows } = await db
-    .from("exemplars")
-    .select("submission_id, teacher_scores, teacher_feedback, created_at")
-    .eq("assignment_id", assignmentId)
-    .neq("submission_id", submissionId)
-    .order("created_at")
-    .limit(3);
-  if (!rows?.length) return [];
-  const keyById = new Map([...questionIdByKey.entries()].map(([k, id]) => [id, k]));
-  const { data: answers } = await db
-    .from("answers")
-    .select("submission_id, question_id, text, teacher_corrected_text, status")
-    .in(
-      "submission_id",
-      rows.map((r) => r.submission_id),
-    );
-  return rows.map((r) => ({
-    answers: (answers ?? [])
-      .filter((a) => a.submission_id === r.submission_id && keyById.has(a.question_id))
-      .map((a) => ({ key: keyById.get(a.question_id)!, text: a.teacher_corrected_text ?? a.text, status: a.status }))
-      .sort((x, y) => Number(x.key.slice(1)) - Number(y.key.slice(1))),
-    scores: (r.teacher_scores as ExemplarForPrompt["scores"]) ?? [],
-    feedback: (r.teacher_feedback as ExemplarForPrompt["feedback"]) ?? null,
-  }));
 }
 type Loaded = Awaited<ReturnType<typeof loadSubmission>>;
 
@@ -475,11 +430,6 @@ export async function stepGrade(deps: PipelineDeps, L: Loaded, t: Transcription)
       gradeLevel: L.assignment.grade_level,
       feedbackLocale: feedbackLocale(L),
       feedback: L.loaded.context.feedback,
-      styleProfile: renderStyleProfile(L.styleProfile),
-      exemplars: renderExemplars(
-        L.exemplars,
-        L.roster.map((s) => s.display_name),
-      ),
     }),
     context: renderAssignmentContext(L.loaded.context),
     images: inp.images,
@@ -637,7 +587,6 @@ export async function stepPersist(deps: PipelineDeps, L: Loaded, t: Transcriptio
     status: "ready",
     confidence: band,
     flags,
-    blind_check: pickForBlindCheck(L.teacher.blind_check_pct, Math.random(), flags),
     total_score: totalScore,
     total_max: totalMax,
     graded_at: new Date().toISOString(),

@@ -1,4 +1,4 @@
-import { LogOut, Settings } from "lucide-react";
+import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -32,11 +32,6 @@ export default async function TeacherLayout({ children }: LayoutProps<"/">) {
             <Wordmark />
           </Link>
           <div className="flex items-center gap-1">
-            <Button asChild variant="ghost" size="icon" aria-label={t("settings")} title={t("settings")}>
-              <Link href="/settings">
-                <Settings aria-hidden />
-              </Link>
-            </Button>
             <LanguageSwitcher />
             <ThemeToggle />
             <form action={signOut}>

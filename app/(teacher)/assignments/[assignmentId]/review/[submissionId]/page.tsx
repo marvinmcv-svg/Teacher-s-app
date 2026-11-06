@@ -65,18 +65,12 @@ export default async function ReviewSubmissionPage({
     supabase.from("feedback").select("*").eq("submission_id", sub.id).maybeSingle(),
   ]);
   if (!a) notFound();
-  const [{ data: roster }, { data: blindRow }, { data: exemplars }] = await Promise.all([
-    supabase
-      .from("students")
-      .select("id, display_name")
-      .eq("class_id", a.class_id)
-      .eq("active", true)
-      .order("display_name"),
-    supabase.from("blind_checks").select("n_items, exact_rate, within_rate").eq("submission_id", sub.id).maybeSingle(),
-    supabase.from("exemplars").select("submission_id").eq("assignment_id", assignmentId),
-  ]);
-  // Blind check (§3.4): until the teacher has graded it, no AI judgement reaches the browser.
-  const blind = sub.blind_check && sub.status === "ready" && !blindRow;
+  const { data: roster } = await supabase
+    .from("students")
+    .select("id, display_name")
+    .eq("class_id", a.class_id)
+    .eq("active", true)
+    .order("display_name");
 
   const signed = await Promise.all(
     (pages ?? []).map(async (p) => {
@@ -120,19 +114,6 @@ export default async function ReviewSubmissionPage({
 
   const queue = await loadReviewQueue(assignmentId);
   const idx = queue.findIndex((s) => s.id === sub.id);
-  const visibleItems = blind
-    ? items.map((i) => ({
-        ...i,
-        aiScore: 0,
-        teacherScore: null,
-        aiLevel: null,
-        band: null,
-        verifierScore: null,
-        disagreement: false,
-        rationale: "",
-        acknowledged: false,
-      }))
-    : items;
   const data: ReviewData = {
     assignment: { id: a.id, title: a.title, scale: ScaleSchema.parse(a.scale) },
     submission: {
@@ -143,12 +124,6 @@ export default async function ReviewSubmissionPage({
       suggestedStudentId: sub.suggested_student_id,
       errorCode: sub.error_code,
       opened: !!sub.opened_at,
-      blind,
-      blindResult: blindRow
-        ? { n: blindRow.n_items, exact: Number(blindRow.exact_rate), within: Number(blindRow.within_rate) }
-        : null,
-      exemplar: (exemplars ?? []).some((e) => e.submission_id === sub.id),
-      exemplarCount: (exemplars ?? []).length,
     },
     roster: roster ?? [],
     pages: signed.map((p) => ({
@@ -165,20 +140,17 @@ export default async function ReviewSubmissionPage({
       bbox: l.bbox as ReviewData["lines"][number]["bbox"],
       confidence: l.confidence,
     })),
-    pins: (pins ?? [])
-      .filter((p) => !blind || p.author === "teacher")
-      .map((p) => ({ ...p, region: p.region as ReviewData["pins"][number]["region"] })),
-    items: visibleItems,
-    feedback:
-      fb && !blind
-        ? {
-            glows: (fb.glows as string[]) ?? [],
-            grows: (fb.grows as { point: string; how: string }[]) ?? [],
-            nextStep: fb.next_step ?? "",
-            practiceItem: fb.practice_item,
-            summary: fb.summary_for_teacher ?? "",
-          }
-        : null,
+    pins: (pins ?? []).map((p) => ({ ...p, region: p.region as ReviewData["pins"][number]["region"] })),
+    items,
+    feedback: fb
+      ? {
+          glows: (fb.glows as string[]) ?? [],
+          grows: (fb.grows as { point: string; how: string }[]) ?? [],
+          nextStep: fb.next_step ?? "",
+          practiceItem: fb.practice_item,
+          summary: fb.summary_for_teacher ?? "",
+        }
+      : null,
     nav: {
       prev: idx > 0 ? queue[idx - 1].id : null,
       next: idx >= 0 && idx < queue.length - 1 ? queue[idx + 1].id : null,

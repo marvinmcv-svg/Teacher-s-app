@@ -1,11 +1,9 @@
 import { NonRetriableError } from "inngest";
 import { callStructured } from "@/lib/ai/client";
 import { perTeacherConcurrency } from "@/lib/ai/config";
-import { AiRefusalError, MissingConfigError } from "@/lib/ai/errors";
 import { getOcrProvider } from "@/lib/ocr/google-vision";
 import { gradeSubmission, markFailure } from "@/lib/pipeline/grade-submission";
 import { splitPdfImport } from "@/lib/pipeline/pdf-import";
-import { distillStyleProfile, teachersDueForProfile } from "@/lib/pipeline/style-profile";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { inngest } from "./client";
 
@@ -93,39 +91,4 @@ export const pdfImportFn = inngest.createFunction(
   },
 );
 
-/** Nightly (03:00 La Paz): fan out a style-profile refresh to teachers who edited recently (§3.7). */
-export const styleProfileNightly = inngest.createFunction(
-  { id: "style-profile-nightly", triggers: [{ cron: "TZ=America/La_Paz 0 3 * * *" }] },
-  async ({ step }) => {
-    const teachers = await step.run("find-teachers", () => teachersDueForProfile(getAdminClient()));
-    if (teachers.length)
-      await step.sendEvent(
-        "fan-out",
-        teachers.map((teacherId) => ({ name: "tinta/style.distill.requested", data: { teacherId } })),
-      );
-    return { teachers: teachers.length };
-  },
-);
-
-export const styleProfileFn = inngest.createFunction(
-  {
-    id: "style-profile-distill",
-    triggers: [{ event: "tinta/style.distill.requested" }],
-    concurrency: [{ key: "event.data.teacherId", limit: 1 }],
-    retries: 2,
-  },
-  async ({ event, step }) => {
-    const { teacherId, force } = event.data as { teacherId: string; force?: boolean };
-    try {
-      return await step.run("distill", () =>
-        distillStyleProfile(getAdminClient(), callStructured, teacherId, force === true),
-      );
-    } catch (err) {
-      // A missing key or a refusal won't fix itself on retry; the old profile stays in use.
-      if (err instanceof MissingConfigError || err instanceof AiRefusalError) throw new NonRetriableError(err.name);
-      throw err;
-    }
-  },
-);
-
-export const functions = [ping, gradeSubmissionFn, pdfImportFn, styleProfileNightly, styleProfileFn];
+export const functions = [ping, gradeSubmissionFn, pdfImportFn];

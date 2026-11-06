@@ -10,8 +10,6 @@ const ENV_OVERRIDE: Partial<Record<AiRole, string>> = {
   key_extract: "TINTA_MODEL_GRADER",
   regenerate: "TINTA_MODEL_GRADER",
   verify: "TINTA_MODEL_VERIFIER",
-  style_distill: "TINTA_MODEL_GRADER",
-  mini_lesson: "TINTA_MODEL_GRADER",
 };
 
 export function roleConfig(role: AiRole): { model: string; effort: Effort; maxTokens: number } {
@@ -46,4 +44,3 @@ export function costUsd(model: string, usage: Usage): number | null {
 export const imageConfig = aiConfig.image;
 export const bandThresholds = aiConfig.confidence_bands;
 export const perTeacherConcurrency = aiConfig.per_teacher_concurrency;
-export const styleProfileConfig = aiConfig.style_profile;

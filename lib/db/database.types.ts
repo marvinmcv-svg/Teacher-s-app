@@ -817,7 +817,6 @@ export type Database = {
           raw_output: Json | null;
           status: string;
           submission_id: string | null;
-          teacher_id: string | null;
           updated_at: string;
         };
         ComputedFields: never;
@@ -838,7 +837,6 @@ export type Database = {
           raw_output?: Json | null;
           status: string;
           submission_id?: string | null;
-          teacher_id?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -858,7 +856,6 @@ export type Database = {
           raw_output?: Json | null;
           status?: string;
           submission_id?: string | null;
-          teacher_id?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -874,13 +871,6 @@ export type Database = {
             columns: ["submission_id"];
             isOneToOne: false;
             referencedRelation: "submissions";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "grading_runs_teacher_id_fkey";
-            columns: ["teacher_id"];
-            isOneToOne: false;
-            referencedRelation: "teachers";
             referencedColumns: ["id"];
           },
         ];
